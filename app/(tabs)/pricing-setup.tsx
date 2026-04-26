@@ -1,0 +1,358 @@
+import { AddPricingRangeModal } from '@/components/ui/AddPricingRangeModal';
+import { Button } from '@/components/ui/Button';
+import { DeleteConfirmationModal } from '@/components/ui/DeleteConfirmationModal';
+import FloatingNav from '@/components/ui/FloatingNav';
+import { useTheme } from '@/constants/useTheme';
+import { pricingApi } from '@/services/api';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useState } from 'react';
+import {
+    ActivityIndicator,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+
+const GAMES = ['CODM', 'MLBB', 'Valorant'];
+
+interface PricingRange {
+  id: number;
+  game: string;
+  range_name: string;
+  tier_start_id: number;
+  tier_end_id: number;
+  price_per_star: string;
+  major_rank_crossing_fee: string;
+  is_active: boolean;
+  display_order: number;
+  tier_start: {
+    id: number;
+    tier_name: string;
+    tier_order: number;
+  };
+  tier_end: {
+    id: number;
+    tier_name: string;
+    tier_order: number;
+  };
+}
+
+export default function PricingSetupScreen() {
+  const theme = useTheme();
+  const [activeGame, setActiveGame] = useState('CODM');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pricingRanges, setPricingRanges] = useState<PricingRange[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedPricing, setSelectedPricing] = useState<PricingRange | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Fetch pricing data when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchPricing();
+    }, [activeGame])
+  );
+
+  const fetchPricing = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        console.log('No token found');
+        return;
+      }
+
+      const response = await pricingApi.fetchPricing(activeGame, token);
+      if (response.success && response.data) {
+        const gameData = response.data[activeGame] || [];
+        setPricingRanges(gameData);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pricing:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePricing = async (pricingId: number) => {
+    setDeletingId(pricingId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+
+    try {
+      setDeleting(true);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await pricingApi.deletePricing(deletingId, token);
+      if (response.success) {
+        // Refetch to confirm deletion from server
+        await fetchPricing();
+        setShowDeleteModal(false);
+        setDeletingId(null);
+      } else {
+        alert(response.message || 'Failed to delete pricing range');
+      }
+    } catch (error) {
+      console.error('Error deleting pricing:', error);
+      alert('Error deleting pricing range');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleEditPricing = (pricing: PricingRange) => {
+    setSelectedPricing(pricing);
+    setShowEditModal(true);
+  };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      paddingHorizontal: theme.spacing.xl,
+    },
+    content: {
+      paddingTop: theme.spacing.xl,
+      paddingBottom: 120,
+    },
+    header: {
+      marginBottom: theme.spacing.lg,
+    },
+    title: {
+      fontSize: theme.typography.styles.heading.fontSize,
+      fontFamily: 'DMMono',
+      fontWeight: 'bold',
+      color: theme.colors.textPrimary,
+      paddingVertical: theme.spacing['2xl'],
+      marginBottom: theme.spacing.xs,
+    },
+    gameTabsContainer: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+      marginBottom: theme.spacing.xl,
+      borderBottomWidth: 1.5,
+      borderBottomColor: theme.colors.border,
+      paddingVertical: theme.spacing.xs,
+      justifyContent: 'center',
+    },
+    gameTab: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: 0,
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
+    },
+    activeGameTab: {
+      borderBottomColor: theme.colors.primary,
+    },
+    gameTabText: {
+      fontSize: 14,
+      fontFamily: 'DMMono',
+      fontWeight: 'bold',
+      color: theme.colors.textSecondary,
+    },
+    activeGameTabText: {
+      color: theme.colors.primary,
+    },
+    rangeCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      borderColor: theme.colors.border,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+    },
+    rangeHeader: {
+      marginBottom: theme.spacing.sm,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    rangeName: {
+      fontSize: 15,
+      fontFamily: 'DMMono',
+      fontWeight: 'bold',
+      color: theme.colors.textPrimary,
+      flex: 1,
+    },
+    actionButtons: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+    },
+    deleteButton: {
+      padding: theme.spacing.sm,
+    },
+    editButton: {
+      padding: theme.spacing.sm,
+    },
+    rangeInfo: {
+      fontSize: 13,
+      fontFamily: 'DMMono',
+      color: theme.colors.textSecondary,
+      marginBottom: 4,
+    },
+    buttonContainer: {
+      marginBottom: theme.spacing.xl,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xl,
+    },
+    emptyStateText: {
+      fontSize: 14,
+      fontFamily: 'DMMono',
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.md,
+    },
+    loadingContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xl,
+    },
+  });
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>My Pricing</Text>
+        </View>
+
+        {/* Game Tabs */}
+        <View style={styles.gameTabsContainer}>
+          {GAMES.map((game) => (
+            <Pressable
+              key={game}
+              style={[styles.gameTab, activeGame === game && styles.activeGameTab]}
+              onPress={() => setActiveGame(game)}
+            >
+              <Text
+                style={[
+                  styles.gameTabText,
+                  activeGame === game && styles.activeGameTabText,
+                ]}
+              >
+                {game}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Add New Range Button */}
+        <View style={styles.buttonContainer}>
+          <Button
+            label="Add Price Range"
+            onPress={() => setShowAddModal(true)}
+            variant="primary"
+            fullWidth
+          />
+        </View>
+
+        {/* Loading State */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        )}
+
+        {/* Pricing Ranges List */}
+        {!loading && pricingRanges.length > 0 && (
+          <View>
+            {pricingRanges.map((range) => (
+              <View key={range.id} style={styles.rangeCard}>
+                <View style={styles.rangeHeader}>
+                  <Text style={styles.rangeName}>{range.range_name}</Text>
+                  <View style={styles.actionButtons}>
+                    <Pressable 
+                      style={styles.editButton}
+                      onPress={() => handleEditPricing(range)}
+                    >
+                      <Ionicons name="pencil-outline" size={20} color={theme.colors.primary} />
+                    </Pressable>
+                    <Pressable 
+                      style={styles.deleteButton}
+                      onPress={() => handleDeletePricing(range.id)}
+                    >
+                      <Ionicons name="trash-outline" size={20} color={theme.colors.primary} />
+                    </Pressable>
+                  </View>
+                </View>
+                <Text style={styles.rangeInfo}>
+                  ₱{parseFloat(range.price_per_star).toFixed(2)} per {activeGame === 'MLBB' ? 'star' : 'tier'}
+                </Text>
+                <Text style={styles.rangeInfo}>
+                  {range.tier_start?.tier_name || `Tier ${range.tier_start_id}`} → {range.tier_end?.tier_name || `Tier ${range.tier_end_id}`}
+                </Text>
+                {parseFloat(range.major_rank_crossing_fee) > 0 && (
+                  <Text style={styles.rangeInfo}>
+                    Crossing Fee: ₱{parseFloat(range.major_rank_crossing_fee).toFixed(2)}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Empty State */}
+        {!loading && pricingRanges.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              No pricing ranges yet. Tap "Add Price Range" to create one.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      <AddPricingRangeModal
+        visible={showAddModal}
+        game={activeGame}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          fetchPricing();
+        }}
+      />
+
+      <AddPricingRangeModal
+        visible={showEditModal}
+        game={activeGame}
+        editingPricing={selectedPricing}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedPricing(null);
+        }}
+        onSuccess={() => {
+          fetchPricing();
+          setShowEditModal(false);
+          setSelectedPricing(null);
+        }}
+      />
+
+      <DeleteConfirmationModal
+        visible={showDeleteModal}
+        title="Delete Pricing Range?"
+        message="This action cannot be undone. The pricing range will be permanently deleted."
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setDeletingId(null);
+        }}
+      />
+
+      <FloatingNav />
+    </SafeAreaView>
+  );
+}

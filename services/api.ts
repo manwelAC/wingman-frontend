@@ -50,12 +50,16 @@ async function apiCall<T>(
       // Response is not JSON (likely HTML error page)
       console.error('⚠️  Server returned non-JSON response:');
       console.error('Status:', response.status);
-      console.error('First 200 chars:', text.substring(0, 200));
+      console.error('URL:', url);
+      console.error('Token sent:', token ? `${token.substring(0, 20)}...` : 'none');
+      console.error('Request body:', options.body);
+      console.error('Response type:', response.headers.get('content-type'));
+      console.error('First 300 chars:', text.substring(0, 300));
       
       return {
         success: false,
         status: response.status,
-        message: `Server error: ${response.status}. Check Laravel logs.`,
+        message: `Server error: ${response.status}. Check Laravel logs and ensure endpoint exists.`,
         data: undefined,
       };
     }
@@ -199,7 +203,10 @@ export const authApi = {
       };
     }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        email_or_username: payload.email,
+        password: payload.password,
+      }),
     }),
 
   /**
@@ -249,6 +256,151 @@ export const authApi = {
       is_active: boolean;
       joined_at: string;
     }>('/auth/me', {}, token),
+};
+
+/**
+ * Game API Calls
+ */
+export const gameApi = {
+  /**
+   * Fetch rank tiers for a specific game (requires token)
+   */
+  fetchRankTiers: async (game: string, token: string) =>
+    apiCall<{
+      game: string;
+      tiers: {
+        id: number;
+        game: string;
+        tier_name: string;
+        tier_order: number;
+        rank_group?: string;
+        tier_number: number;
+        stars_per_tier: number;
+        is_active: boolean;
+      }[];
+    }>(`/games/${game}/ranks`, {
+      method: 'GET',
+    }, token),
+};
+
+/**
+ * Pricing API Calls
+ */
+export const pricingApi = {
+  /**
+   * Fetch all pricing ranges for a game (requires token)
+   * Returns pricing grouped by game
+   */
+  fetchPricing: async (game: string, token: string) =>
+    apiCall<{
+      [key: string]: {
+        id: number;
+        pilot_id: number;
+        game: string;
+        range_name: string;
+        tier_start_id: number;
+        tier_end_id: number;
+        price_per_star: string;
+        major_rank_crossing_fee: string;
+        is_active: boolean;
+        display_order: number;
+        created_at: string;
+        updated_at: string;
+        tierStart: {
+          id: number;
+          game: string;
+          tier_name: string;
+          tier_order: number;
+          stars_per_tier: number;
+        };
+        tierEnd: {
+          id: number;
+          game: string;
+          tier_name: string;
+          tier_order: number;
+          stars_per_tier: number;
+        };
+      }[];
+    }>(`/pricing`, {
+      method: 'GET',
+    }, token),
+
+  /**
+   * Create a new pricing range (requires token)
+   */
+  createPricing: async (payload: {
+    game: string;
+    range_name: string;
+    tier_start_id: number;
+    tier_end_id: number;
+    price_per_star?: number;  // For MLBB
+    price_per_tier?: number;  // For CODM/Valorant
+    major_rank_crossing_fee?: number;
+    display_order?: number;
+    reason?: string;
+  }, token: string) =>
+    apiCall<{
+      id: number;
+      pilot_id: number;
+      game: string;
+      range_name: string;
+      tier_start_id: number;
+      tier_end_id: number;
+      price_per_star: string;
+      major_rank_crossing_fee: string;
+      is_active: boolean;
+      display_order: number;
+      created_at: string;
+      updated_at: string;
+      tierStart: {
+        id: number;
+        tier_name: string;
+        tier_order: number;
+      };
+      tierEnd: {
+        id: number;
+        tier_name: string;
+        tier_order: number;
+      };
+    }>('/pricing', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token),
+
+  /**
+   * Update a pricing range (requires token)
+   */
+  updatePricing: async (id: number, payload: {
+    range_name?: string;
+    price_per_star?: number;
+    major_rank_crossing_fee?: number;
+    display_order?: number;
+    reason?: string;
+  }, token: string) =>
+    apiCall<{
+      id: number;
+      pilot_id: number;
+      game: string;
+      range_name: string;
+      tier_start_id: number;
+      tier_end_id: number;
+      price_per_star: string;
+      major_rank_crossing_fee: string;
+      is_active: boolean;
+      display_order: number;
+      updated_at: string;
+    }>(`/pricing/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }, token),
+
+  /**
+   * Delete a pricing range (requires token)
+   */
+  deletePricing: async (id: number, token: string) =>
+    apiCall<null>(`/pricing/${id}`, {
+      method: 'DELETE',
+    }, token),
 };
 
 export default authApi;

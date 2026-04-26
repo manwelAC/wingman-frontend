@@ -1,98 +1,186 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import FloatingNav from '@/components/ui/FloatingNav';
+import { useTheme } from '@/constants/useTheme';
+import React from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function DashboardScreen() {
+  const theme = useTheme();
 
-export default function HomeScreen() {
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      paddingHorizontal: theme.spacing.xl,
+    },
+    content: {
+      paddingTop: theme.spacing.xl,
+      paddingBottom: 120,
+    },
+    greeting: {
+      fontSize: theme.typography.styles.heading.fontSize,
+      fontFamily: 'DMMono',
+      fontWeight: 'bold',
+      color: theme.colors.textPrimary,
+      paddingVertical: theme.spacing['2xl'],
+      marginBottom: theme.spacing.sm,
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+      marginBottom: theme.spacing.xl,
+      marginTop: -theme.spacing.md,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      borderColor: theme.colors.border,
+      padding: theme.spacing.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 120,
+    },
+    statValue: {
+      fontSize: 32,
+      fontFamily: 'DMMono',
+      fontWeight: 'bold',
+      color: theme.colors.primary,
+      marginBottom: theme.spacing.sm,
+    },
+    statLabel: {
+      fontSize: 13,
+      fontFamily: 'DMMono',
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    sectionTitle: {
+      fontSize: theme.typography.styles.subheading.fontSize,
+      fontFamily: 'DMMono',
+      fontWeight: 'bold',
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.md,
+      marginTop: theme.spacing.sm,
+    },
+    grindCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      borderColor: theme.colors.border,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+    },
+    grindHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.sm,
+    },
+    grindNumber: {
+      fontSize: 14,
+      fontFamily: 'DMMono',
+      fontWeight: 'bold',
+      color: theme.colors.textPrimary,
+    },
+    statusBadge: {
+      backgroundColor: '#EEF2FF',
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    statusText: {
+      fontSize: 12,
+      fontFamily: 'DMMono',
+      fontWeight: 'bold',
+      color: theme.colors.primary,
+    },
+    grindInfo: {
+      fontSize: 13,
+      fontFamily: 'DMMono',
+      color: theme.colors.textSecondary,
+      marginBottom: 4,
+    },
+    placeholder: {
+      textAlign: 'center',
+      paddingVertical: theme.spacing.xl,
+      fontSize: 14,
+      fontFamily: 'DMMono',
+      color: theme.colors.textSecondary,
+    },
+  });
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={styles.container}>
+      <ScrollView 
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.greeting}>Welcome back, Pilot</Text>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {/* Stat Cards */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statLabel}>Total Grinds</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>8</Text>
+            <Text style={styles.statLabel}>Completed</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>2</Text>
+            <Text style={styles.statLabel}>Active</Text>
+          </View>
+        </View>
+
+        {/* Total Earned Card */}
+        <View style={[styles.statCard, { marginBottom: theme.spacing.xl }]}>
+          <Text style={styles.statValue}>₱1,450.00</Text>
+          <Text style={styles.statLabel}>Total Earned</Text>
+        </View>
+
+        {/* Active Grinds Section */}
+        <Text style={styles.sectionTitle}>Active Grinds</Text>
+        <View>
+          <View style={styles.grindCard}>
+            <View style={styles.grindHeader}>
+              <Text style={styles.grindNumber}>GRD-0001</Text>
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusText}>IN PROGRESS</Text>
+              </View>
+            </View>
+            <Text style={styles.grindInfo}>John Doe • CODM</Text>
+            <Text style={styles.grindInfo}>Master I → Legendary</Text>
+            <Text style={styles.grindInfo}>₱300.00</Text>
+          </View>
+
+          <View style={styles.grindCard}>
+            <View style={styles.grindHeader}>
+              <Text style={styles.grindNumber}>GRD-0002</Text>
+              <View style={[styles.statusBadge, { backgroundColor: '#FEF3C7' }]}>
+                <Text style={[styles.statusText, { color: '#92400E' }]}>
+                  NOT STARTED
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.grindInfo}>Jane Smith • MLBB</Text>
+            <Text style={styles.grindInfo}>Master IV → Epic I</Text>
+            <Text style={styles.grindInfo}>₱150.00</Text>
+          </View>
+        </View>
+
+        {/* Recent Completions Section */}
+        <Text style={styles.sectionTitle}>Recent Completions</Text>
+        <Text style={styles.placeholder}>No completed grinds yet</Text>
+      </ScrollView>
+
+      <FloatingNav />
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});

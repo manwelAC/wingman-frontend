@@ -203,6 +203,28 @@ export const authApi = {
     }),
 
   /**
+   * Login with fingerprint (biometric)
+   */
+  loginWithFingerprint: async (emailOrUsername: string) =>
+    apiCall<{
+      token: string;
+      user: {
+        id: number;
+        username: string;
+        user_type: string;
+        display_name: string;
+        email: string;
+        games_expertise: string[];
+        is_verified: boolean;
+        profile_image_url: string | null;
+      };
+      unverified?: boolean;
+    }>('/auth/login-fingerprint', {
+      method: 'POST',
+      body: JSON.stringify({ email_or_username: emailOrUsername }),
+    }),
+
+  /**
    * Logout (requires token)
    */
   logout: async (token: string) =>

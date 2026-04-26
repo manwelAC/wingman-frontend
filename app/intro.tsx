@@ -32,6 +32,30 @@ const slides: Slide[] = [
     description: 'See how much you\'ve earned',
     icon: 'cash',
   },
+  {
+    id: '3',
+    title: 'Controlled Pricing',
+    description: 'Fix your own pricing depending on your business',
+    icon: 'pricetag',
+  },
+ {
+    id: '4',
+    title: 'Auto-Calculate',
+    description: 'Just input your grind, System does the work!',
+    icon: 'rocket',
+  },
+   {
+    id: '5',
+    title: 'Consistency',
+    description: 'Keeps your business alive',
+    icon: 'pulse',
+  },
+     {
+    id: '6',
+    title: 'Seamless Auth',
+    description: 'Allows you to use your own biometrics',
+    icon: 'finger-print',
+  },
 ];
 
 export default function IntroScreen() {

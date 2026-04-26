@@ -4,8 +4,9 @@ import { useTheme } from '@/constants/useTheme';
 import { authApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -40,6 +41,22 @@ export default function LoginScreen() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [fingerprintLoading, setFingerprintLoading] = useState(false);
+
+  // Check if device supports biometrics on component mount
+  useEffect(() => {
+    const checkBiometric = async () => {
+      try {
+        const compatible = await LocalAuthentication.hasHardwareAsync();
+        setBiometricAvailable(compatible);
+      } catch (error) {
+        console.error('Error checking biometric availability:', error);
+        setBiometricAvailable(false);
+      }
+    };
+    checkBiometric();
+  }, []);
 
   const styles = StyleSheet.create({
     container: {
@@ -176,6 +193,71 @@ export default function LoginScreen() {
     }
   };
 
+  /**
+   * Handle fingerprint/biometric login
+   */
+  const handleFingerprintLogin = async () => {
+    // Validate email/username is entered
+    if (!formData.emailOrUsername.trim()) {
+      setErrors({ general: 'Please enter your email or username first' });
+      return;
+    }
+
+    setFingerprintLoading(true);
+
+    try {
+      // Prompt for fingerprint
+      const result = await LocalAuthentication.authenticateAsync({
+        disableDeviceFallback: false,
+        reason: 'Authenticate to login to Wingman',
+      });
+
+      if (!result.success) {
+        setErrors({ general: 'Fingerprint authentication failed' });
+        return;
+      }
+
+      // Call fingerprint login endpoint
+      const response = await authApi.loginWithFingerprint(
+        formData.emailOrUsername.trim()
+      );
+
+      if (!response.success) {
+        setErrors({
+          general: response.message || 'Fingerprint login failed. Please try again.',
+        });
+        return;
+      }
+
+      // Check if user is unverified
+      if (response.data?.unverified) {
+        router.push({
+          pathname: '/auth/verify-email',
+          params: { email: response.data.user?.email || formData.emailOrUsername.trim() },
+        });
+        return;
+      }
+
+      // Save token and user to AsyncStorage
+      if (response.data?.token) {
+        await AsyncStorage.setItem('authToken', response.data.token);
+        if (response.data.user) {
+          await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+        }
+
+        // Redirect to dashboard
+        router.push('/(tabs)');
+      }
+    } catch (error) {
+      console.error('Fingerprint login error:', error);
+      setErrors({
+        general: 'An error occurred during fingerprint authentication.',
+      });
+    } finally {
+      setFingerprintLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -264,6 +346,76 @@ export default function LoginScreen() {
                 fullWidth
               />
             </View>
+
+            {/* Fingerprint Divider */}
+            {biometricAvailable && (
+              <>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginVertical: theme.spacing.lg,
+                    gap: theme.spacing.md,
+                  }}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      height: 1,
+                      backgroundColor: theme.colors.border,
+                    }}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: 'DMMono',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    or use fingerprint
+                  </Text>
+                  <View
+                    style={{
+                      flex: 1,
+                      height: 1,
+                      backgroundColor: theme.colors.border,
+                    }}
+                  />
+                </View>
+
+                {/* Fingerprint Button */}
+                <Pressable
+                  onPress={handleFingerprintLogin}
+                  disabled={fingerprintLoading}
+                  style={{
+                    paddingVertical: theme.spacing.md,
+                    paddingHorizontal: theme.spacing.lg,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: theme.colors.primary,
+                    alignItems: 'center',
+                    gap: theme.spacing.sm,
+                    opacity: fingerprintLoading ? 0.6 : 1,
+                  }}
+                >
+                  <Ionicons
+                    name="finger-print"
+                    size={24}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontFamily: 'DMMono',
+                      fontWeight: 'bold',
+                      color: theme.colors.primary,
+                    }}
+                  >
+                    {fingerprintLoading ? 'Scanning...' : 'Use Fingerprint'}
+                  </Text>
+                </Pressable>
+              </>
+            )}
           </View>
 
           {/* Register Link */}

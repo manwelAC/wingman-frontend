@@ -41,7 +41,24 @@ async function apiCall<T>(
       headers,
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    
+    try {
+      data = JSON.parse(text);
+    } catch (parseError) {
+      // Response is not JSON (likely HTML error page)
+      console.error('⚠️  Server returned non-JSON response:');
+      console.error('Status:', response.status);
+      console.error('First 200 chars:', text.substring(0, 200));
+      
+      return {
+        success: false,
+        status: response.status,
+        message: `Server error: ${response.status}. Check Laravel logs.`,
+        data: undefined,
+      };
+    }
 
     if (!response.ok) {
       return {
@@ -74,6 +91,50 @@ async function apiCall<T>(
     };
   }
 }
+
+/**
+ * Health Check - Verify backend connection
+ * Call this on app startup to ensure the backend is reachable
+ */
+export const checkBackendHealth = async (): Promise<{
+  isConnected: boolean;
+  message: string;
+  baseUrl: string;
+}> => {
+  try {
+    console.log('🔍 Checking backend connection...');
+    // Make a simple GET request to the base URL
+    // Any HTTP response means the server is running (even 404 is OK)
+    // We only care about network/timeout errors
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`${API_BASE_URL}/`, { 
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    
+    // If we got any HTTP response, the backend is reachable
+    console.log('✅ Backend connected:', API_BASE_URL);
+    
+    return {
+      isConnected: true,
+      message: 'Connected to backend',
+      baseUrl: API_BASE_URL,
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Backend connection failed:', {
+      baseUrl: API_BASE_URL,
+      error: errorMsg,
+    });
+    return {
+      isConnected: false,
+      message: `Backend unreachable: ${errorMsg}`,
+      baseUrl: API_BASE_URL,
+    };
+  }
+};
 
 /**
  * Auth API Calls

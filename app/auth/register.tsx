@@ -154,6 +154,19 @@ export default function RegisterScreen() {
       });
 
       if (!response.success) {
+        // Check if email needs verification (already exists but unverified)
+        if (
+          response.message &&
+          response.message.toLowerCase().includes('verify')
+        ) {
+          // Redirect to email verification screen
+          router.push({
+            pathname: '/auth/verify-email',
+            params: { email: formData.email.trim() },
+          });
+          return;
+        }
+
         // Handle validation errors from backend
         if (response.errors) {
           const backendErrors: FormErrors = {};

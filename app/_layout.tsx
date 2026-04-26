@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { checkBackendHealth } from '@/services/api';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +29,9 @@ export default function RootLayout() {
     if (fontsLoaded) {
       // Only hide splash when fonts are definitely loaded
       SplashScreen.hideAsync();
+      
+      // Check backend connection
+      checkBackendHealth();
     }
     if (fontError) {
       console.error('Font loading error:', fontError);

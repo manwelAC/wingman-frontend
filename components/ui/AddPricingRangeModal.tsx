@@ -3,15 +3,15 @@ import { gameApi, pricingApi } from '@/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { Button } from './Button';
 
@@ -370,7 +370,7 @@ export function AddPricingRangeModal({
             <TextInput
               style={styles.input}
               placeholder="e.g., Master to Grandmaster"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={`${theme.colors.textSecondary}80`}
               value={formData.rangeName}
               onChangeText={(text) =>
                 setFormData((prev) => ({ ...prev, rangeName: text }))
@@ -461,7 +461,7 @@ export function AddPricingRangeModal({
             <TextInput
               style={styles.input}
               placeholder={game === 'MLBB' ? 'e.g., 50.00' : 'e.g., 50.00'}
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={`${theme.colors.textSecondary}80`}
               keyboardType="decimal-pad"
               value={formData.price}
               onChangeText={(text) =>
@@ -476,7 +476,7 @@ export function AddPricingRangeModal({
             <TextInput
               style={styles.input}
               placeholder="e.g., 500.00"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={`${theme.colors.textSecondary}80`}
               keyboardType="decimal-pad"
               value={formData.majorRankFee}
               onChangeText={(text) =>

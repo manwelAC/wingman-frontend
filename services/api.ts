@@ -403,4 +403,97 @@ export const pricingApi = {
     }, token),
 };
 
+/**
+ * Customer API Calls
+ */
+export const customerApi = {
+  /**
+   * Fetch all customers for the authenticated pilot (requires token)
+   */
+  fetchCustomers: async (token: string) =>
+    apiCall<{
+      id: number;
+      pilot_id: number;
+      display_name: string;
+      email: string | null;
+      phone: string | null;
+      notes: string | null;
+      created_at: string;
+      updated_at: string;
+    }[]>('/customers', {
+      method: 'GET',
+    }, token),
+
+  /**
+   * Get a single customer with their grind history (requires token)
+   */
+  getCustomer: async (id: number, token: string) =>
+    apiCall<{
+      id: number;
+      pilot_id: number;
+      display_name: string;
+      email: string | null;
+      phone: string | null;
+      notes: string | null;
+      created_at: string;
+      updated_at: string;
+      grinds: any[];
+    }>(`/customers/${id}`, {
+      method: 'GET',
+    }, token),
+
+  /**
+   * Create a new customer (requires token)
+   */
+  createCustomer: async (payload: {
+    display_name: string;
+    email?: string | null;
+    phone?: string | null;
+    notes?: string | null;
+  }, token: string) =>
+    apiCall<{
+      id: number;
+      pilot_id: number;
+      display_name: string;
+      email: string | null;
+      phone: string | null;
+      notes: string | null;
+      created_at: string;
+      updated_at: string;
+    }>('/customers', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token),
+
+  /**
+   * Update a customer (requires token)
+   */
+  updateCustomer: async (id: number, payload: {
+    display_name?: string;
+    email?: string | null;
+    phone?: string | null;
+    notes?: string | null;
+  }, token: string) =>
+    apiCall<{
+      id: number;
+      pilot_id: number;
+      display_name: string;
+      email: string | null;
+      phone: string | null;
+      notes: string | null;
+      updated_at: string;
+    }>(`/customers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }, token),
+
+  /**
+   * Delete a customer (requires token)
+   */
+  deleteCustomer: async (id: number, token: string) =>
+    apiCall<null>(`/customers/${id}`, {
+      method: 'DELETE',
+    }, token),
+};
+
 export default authApi;

@@ -9,13 +9,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 const GAMES = ['CODM', 'MLBB', 'Valorant'];
@@ -30,12 +30,14 @@ interface PricingRange {
   major_rank_crossing_fee: string;
   is_active: boolean;
   display_order: number;
-  tier_start: {
+  created_at: string;
+  updated_at: string;
+  tierStart: {
     id: number;
     tier_name: string;
     tier_order: number;
   };
-  tier_end: {
+  tierEnd: {
     id: number;
     tier_name: string;
     tier_order: number;
@@ -280,13 +282,13 @@ export default function PricingSetupScreen() {
                       style={styles.editButton}
                       onPress={() => handleEditPricing(range)}
                     >
-                      <Ionicons name="pencil-outline" size={20} color={theme.colors.primary} />
+                      <Ionicons name="create-outline" size={20} color={theme.colors.textPrimary} />
                     </Pressable>
                     <Pressable 
                       style={styles.deleteButton}
                       onPress={() => handleDeletePricing(range.id)}
                     >
-                      <Ionicons name="trash-outline" size={20} color={theme.colors.primary} />
+                      <Ionicons name="trash-outline" size={20} color={theme.colors.statusDanger} />
                     </Pressable>
                   </View>
                 </View>
@@ -294,7 +296,7 @@ export default function PricingSetupScreen() {
                   ₱{parseFloat(range.price_per_star).toFixed(2)} per {activeGame === 'MLBB' ? 'star' : 'tier'}
                 </Text>
                 <Text style={styles.rangeInfo}>
-                  {range.tier_start?.tier_name || `Tier ${range.tier_start_id}`} → {range.tier_end?.tier_name || `Tier ${range.tier_end_id}`}
+                  {range.tierStart?.tier_name || `Tier ${range.tier_start_id}`} → {range.tierEnd?.tier_name || `Tier ${range.tier_end_id}`}
                 </Text>
                 {parseFloat(range.major_rank_crossing_fee) > 0 && (
                   <Text style={styles.rangeInfo}>

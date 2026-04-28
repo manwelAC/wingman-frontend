@@ -137,7 +137,7 @@ export default function PricingSetupScreen() {
       fontFamily: 'DMMono',
       fontWeight: 'bold',
       color: theme.colors.textPrimary,
-      paddingVertical: theme.spacing['2xl'],
+      paddingVertical: theme.spacing.xl,
       marginBottom: theme.spacing.xs,
     },
     gameTabsContainer: {

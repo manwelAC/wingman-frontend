@@ -7,7 +7,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 interface NavItem {
   label: string;
   icon: string;
-  href: string;
+  href: "/(tabs)" | "/(tabs)/grinds" | "/(tabs)/log-grind" | "/(tabs)/customers" | "/(tabs)/pricing-setup";
 }
 
 const navItems: NavItem[] = [
@@ -80,7 +80,11 @@ export default function FloatingNav() {
             <Pressable
               key={item.href}
               style={styles.logGrindButton}
-              onPress={() => router.push(item.href)}
+              onPress={() => {
+                if (!isActive) {
+                  router.push(item.href);
+                }
+              }}
             >
               <Ionicons
                 name={item.icon as any}
@@ -95,7 +99,11 @@ export default function FloatingNav() {
           <Pressable
             key={item.href}
             style={styles.navItem}
-            onPress={() => router.push(item.href)}
+            onPress={() => {
+              if (!isActive) {
+                router.push(item.href);
+              }
+            }}
           >
             <Ionicons
               name={item.icon as any}

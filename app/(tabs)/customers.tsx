@@ -144,7 +144,7 @@ export default function CustomersScreen() {
       paddingHorizontal: theme.spacing.xl,
       paddingVertical: theme.spacing['2xl'],
     },
-    headerTop: {
+    titleContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -152,9 +152,11 @@ export default function CustomersScreen() {
     },
     title: {
       fontSize: theme.typography.styles.heading.fontSize,
-      fontFamily: 'DMMono-Medium',
+      fontFamily: 'DMMono',
       fontWeight: 'bold',
       color: theme.colors.textPrimary,
+      paddingVertical: theme.spacing.xl,
+      
     },
     addButton: {
       padding: theme.spacing.sm,
@@ -265,7 +267,7 @@ export default function CustomersScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTop}>
+        <View style={styles.titleContainer}>
           <Text style={styles.title}>Customers</Text>
           <Pressable
             style={styles.addButton}

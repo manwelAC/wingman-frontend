@@ -571,6 +571,9 @@ export const grindApi = {
       current_tier: string;
       account_username: string;
       special_instructions: string;
+      started_at: string | null;
+      completed_at: string | null;
+      cancelled_at: string | null;
       started_at: string;
       completed_at: string | null;
       created_at: string;
@@ -594,6 +597,9 @@ export const grindApi = {
       progress_percentage: number;
       base_price: string;
       final_price: string;
+      started_at: string | null;
+      completed_at: string | null;
+      cancelled_at: string | null;
       customer: {
         id: number;
         display_name: string;
@@ -601,6 +607,43 @@ export const grindApi = {
       created_at: string;
     }[]>('/grinds', {
       method: 'GET',
+    }, token),
+
+  /**
+   * Update grind progress and status (start, cancel, update progress)
+   */
+  updateGrindProgress: async (grindId: number, payload: {
+    status?: 'in_progress' | 'cancelled';
+    progress_percentage?: number;
+    current_tier?: string;
+  }, token: string) =>
+    apiCall<{
+      id: number;
+      grind_number: string;
+      status: string;
+      progress_percentage: number;
+      started_at: string | null;
+      completed_at: string | null;
+      cancelled_at: string | null;
+    }>(`/grinds/${grindId}/progress`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }, token),
+
+  /**
+   * Complete a grind
+   */
+  completeGrind: async (grindId: number, token: string) =>
+    apiCall<{
+      id: number;
+      grind_number: string;
+      status: string;
+      progress_percentage: number;
+      started_at: string | null;
+      completed_at: string | null;
+      cancelled_at: string | null;
+    }>(`/grinds/${grindId}/complete`, {
+      method: 'POST',
     }, token),
 };
 

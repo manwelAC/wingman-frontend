@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/Button';
 import FloatingNav from '@/components/ui/FloatingNav';
+import { SuccessModal } from '@/components/ui/SuccessModal';
 import { useTheme } from '@/constants/useTheme';
 import { calculatorApi, customerApi, gameApi, grindApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +20,7 @@ import {
 } from 'react-native';
 
 const GAMES = ['CODM', 'MLBB', 'Valorant'];
-const SERVICE_TYPES = ['rank-boost', 'star-grind', 'placement-matches'];
+const SERVICE_TYPES = ['rank-boost', 'star-grind'];
 
 interface Customer {
   id: number;
@@ -56,6 +57,9 @@ export default function LogGrindScreen() {
   const [accountUsername, setAccountUsername] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successGrindNumber, setSuccessGrindNumber] = useState('');
+  const [successCustomerName, setSuccessCustomerName] = useState('');
 
   // Modal state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -147,7 +151,7 @@ export default function LogGrindScreen() {
         {
           customer_id: selectedCustomer.id,
           game: selectedGame,
-          service_type: serviceType,
+          service_type: serviceType.replace('-', '_'),
           starting_tier_id: startingTier.id,
           target_tier_id: targetTier.id,
           base_price: totalPrice,
@@ -159,16 +163,22 @@ export default function LogGrindScreen() {
       );
 
       if (response.success) {
-        alert('Grind logged successfully!');
-        // Reset form
-        setSelectedCustomer(null);
-        setSelectedGame('CODM');
-        setServiceType('rank-boost');
-        setStartingTier(null);
-        setTargetTier(null);
-        setAccountUsername('');
-        setSpecialInstructions('');
-        setTotalPrice(0);
+        // Store success info
+        setSuccessGrindNumber(response.data?.grind_number || 'Grind');
+        setSuccessCustomerName(selectedCustomer.display_name);
+        setShowSuccessModal(true);
+        
+        // Reset form after showing success
+        setTimeout(() => {
+          setSelectedCustomer(null);
+          setSelectedGame('CODM');
+          setServiceType('rank-boost');
+          setStartingTier(null);
+          setTargetTier(null);
+          setAccountUsername('');
+          setSpecialInstructions('');
+          setTotalPrice(0);
+        }, 100);
       } else {
         alert(response.message || 'Failed to create grind');
       }
@@ -405,7 +415,13 @@ export default function LogGrindScreen() {
         <View style={styles.section}>
           <Text style={styles.label}>Service Type *</Text>
           <View style={styles.gameTabsContainer}>
-            {SERVICE_TYPES.map((type) => (
+            {SERVICE_TYPES.filter((type) => {
+              // star-grind only for MLBB
+              if (type === 'star-grind') {
+                return selectedGame === 'MLBB';
+              }
+              return true;
+            }).map((type) => (
               <Pressable
                 key={type}
                 style={[styles.gameTab, serviceType === type && styles.activeGameTab]}
@@ -516,7 +532,7 @@ export default function LogGrindScreen() {
         onRequestClose={() => setShowCustomerModal(false)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: theme.spacing.xl }}>
             <Text style={styles.modalTitle}>Select Customer</Text>
             {customers.map((customer) => (
               <Pressable
@@ -542,7 +558,7 @@ export default function LogGrindScreen() {
         onRequestClose={() => setShowStartTierModal(false)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: theme.spacing.xl }}>
             <Text style={styles.modalTitle}>Select Starting Tier</Text>
             {gameTiers.map((tier) => (
               <Pressable
@@ -572,7 +588,7 @@ export default function LogGrindScreen() {
         onRequestClose={() => setShowTargetTierModal(false)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: theme.spacing.xl }}>
             <Text style={styles.modalTitle}>Select Target Tier</Text>
             {gameTiers
               .filter((tier) => !startingTier || tier.tier_order > startingTier.tier_order)
@@ -595,6 +611,15 @@ export default function LogGrindScreen() {
           </ScrollView>
         </View>
       </Modal>
+
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Grind Logged!"
+        message={`Successfully created grind ${successGrindNumber} for ${successCustomerName}`}
+        onDismiss={() => setShowSuccessModal(false)}
+        autoClose={true}
+        autoCloseDuration={2500}
+      />
 
       <FloatingNav />
     </SafeAreaView>

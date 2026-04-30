@@ -14,6 +14,7 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -55,6 +56,7 @@ export default function PricingSetupScreen() {
   const [selectedPricing, setSelectedPricing] = useState<PricingRange | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   // Fetch pricing data when screen is focused
   useFocusEffect(
@@ -95,19 +97,30 @@ export default function PricingSetupScreen() {
     try {
       setDeleting(true);
       const token = await AsyncStorage.getItem('authToken');
-      if (!token) return;
+      if (!token) {
+        alert('Authentication token not found. Please log in again.');
+        setDeleting(false);
+        return;
+      }
 
+      console.log('🗑️  Deleting pricing ID:', deletingId);
+      console.log('🌐 Sending DELETE request to backend...');
+      
       const response = await pricingApi.deletePricing(deletingId, token);
+      console.log('Delete response:', response);
+      
       if (response.success) {
+        console.log('✅ Delete successful, refetching pricing...');
         // Refetch to confirm deletion from server
         await fetchPricing();
         setShowDeleteModal(false);
         setDeletingId(null);
       } else {
+        console.error('❌ Delete failed:', response.message);
         alert(response.message || 'Failed to delete pricing range');
       }
     } catch (error) {
-      console.error('Error deleting pricing:', error);
+      console.error('❌ Error deleting pricing:', error);
       alert('Error deleting pricing range');
     } finally {
       setDeleting(false);
@@ -117,6 +130,59 @@ export default function PricingSetupScreen() {
   const handleEditPricing = (pricing: PricingRange) => {
     setSelectedPricing(pricing);
     setShowEditModal(true);
+  };
+
+  const togglePricingStatus = async (pricingId: number, currentStatus: boolean) => {
+    try {
+      setTogglingId(pricingId);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        alert('Authentication token not found. Please log in again.');
+        return;
+      }
+
+      console.log(`🔄 Toggling pricing ID ${pricingId} to ${!currentStatus}`);
+      
+      // Update local state optimistically
+      setPricingRanges((prev) =>
+        prev.map((range) =>
+          range.id === pricingId ? { ...range, is_active: !currentStatus } : range
+        )
+      );
+
+      // Call update API
+      const response = await pricingApi.updatePricing(pricingId, {
+        is_active: !currentStatus,
+      }, token);
+
+      console.log('Toggle response:', response);
+
+      if (!response.success) {
+        // Revert on failure
+        console.error('❌ Toggle failed:', response.message);
+        setPricingRanges((prev) =>
+          prev.map((range) =>
+            range.id === pricingId ? { ...range, is_active: currentStatus } : range
+          )
+        );
+        alert(response.message || 'Failed to update pricing status');
+      } else {
+        // Refetch to confirm backend persisted the change
+        console.log('✅ Toggle successful, refetching to confirm...');
+        await fetchPricing();
+      }
+    } catch (error) {
+      console.error('Error toggling pricing status:', error);
+      alert('Error updating pricing status');
+      // Revert on error
+      setPricingRanges((prev) =>
+        prev.map((range) =>
+          range.id === pricingId ? { ...range, is_active: currentStatus } : range
+        )
+      );
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const styles = StyleSheet.create({
@@ -278,6 +344,13 @@ export default function PricingSetupScreen() {
                 <View style={styles.rangeHeader}>
                   <Text style={styles.rangeName}>{range.range_name}</Text>
                   <View style={styles.actionButtons}>
+                    <Switch
+                      value={range.is_active}
+                      onValueChange={() => togglePricingStatus(range.id, range.is_active)}
+                      disabled={togglingId === range.id}
+                      trackColor={{ false: '#767577', true: theme.colors.primary }}
+                      thumbColor={range.is_active ? theme.colors.primary : '#f4f3f4'}
+                    />
                     <Pressable 
                       style={styles.editButton}
                       onPress={() => handleEditPricing(range)}
@@ -292,15 +365,20 @@ export default function PricingSetupScreen() {
                     </Pressable>
                   </View>
                 </View>
-                <Text style={styles.rangeInfo}>
+                <Text style={[styles.rangeInfo, !range.is_active && { opacity: 0.5 }]}>
                   ₱{parseFloat(range.price_per_star).toFixed(2)} per {activeGame === 'MLBB' ? 'star' : 'tier'}
                 </Text>
-                <Text style={styles.rangeInfo}>
+                <Text style={[styles.rangeInfo, !range.is_active && { opacity: 0.5 }]}>
                   {range.tierStart?.tier_name || `Tier ${range.tier_start_id}`} → {range.tierEnd?.tier_name || `Tier ${range.tier_end_id}`}
                 </Text>
                 {parseFloat(range.major_rank_crossing_fee) > 0 && (
-                  <Text style={styles.rangeInfo}>
+                  <Text style={[styles.rangeInfo, !range.is_active && { opacity: 0.5 }]}>
                     Crossing Fee: ₱{parseFloat(range.major_rank_crossing_fee).toFixed(2)}
+                  </Text>
+                )}
+                {!range.is_active && (
+                  <Text style={[styles.rangeInfo, { color: theme.colors.statusDanger, marginTop: 8 }]}>
+                    Inactive
                   </Text>
                 )}
               </View>

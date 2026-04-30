@@ -36,6 +36,12 @@ async function apiCall<T>(
   }
 
   try {
+    console.log(`📡 [${options.method || 'GET'}] ${url}`, {
+      method: options.method || 'GET',
+      headers: { ...headers, Authorization: token ? `Bearer ${token.substring(0, 20)}...` : 'none' },
+      body: options.body,
+    });
+
     const response = await fetch(url, {
       ...options,
       headers,
@@ -64,7 +70,10 @@ async function apiCall<T>(
       };
     }
 
+    console.log(`✅ Response [${response.status}] ${url}:`, data);
+
     if (!response.ok) {
+      console.error(`❌ Request failed [${response.status}]:`, data);
       return {
         success: false,
         status: response.status,
@@ -284,6 +293,34 @@ export const gameApi = {
 };
 
 /**
+ * Calculator API Calls
+ */
+export const calculatorApi = {
+  /**
+   * Calculate price for a rank boost grind (requires token)
+   */
+  calculateRankBoost: async (payload: {
+    game: string;
+    service_type: string;
+    starting_tier_id: number;
+    target_tier_id: number;
+  }, token: string) =>
+    apiCall<{
+      game: string;
+      service_type: string;
+      starting_tier_id: number;
+      target_tier_id: number;
+      total_tiers: number;
+      base_price: number;
+      crossing_fee: number;
+      final_price: number;
+    }>('/calculator/rank-boost', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token),
+};
+
+/**
  * Pricing API Calls
  */
 export const pricingApi = {
@@ -375,6 +412,7 @@ export const pricingApi = {
     price_per_star?: number;
     major_rank_crossing_fee?: number;
     display_order?: number;
+    is_active?: boolean;
     reason?: string;
   }, token: string) =>
     apiCall<{
@@ -493,6 +531,76 @@ export const customerApi = {
   deleteCustomer: async (id: number, token: string) =>
     apiCall<null>(`/customers/${id}`, {
       method: 'DELETE',
+    }, token),
+};
+
+/**
+ * Grind API Calls
+ */
+export const grindApi = {
+  /**
+   * Create a new grind session (requires token)
+   */
+  createGrind: async (payload: {
+    customer_id: number;
+    game: string;
+    service_type: string;
+    starting_tier_id: number;
+    target_tier_id: number;
+    base_price: number;
+    final_price: number;
+    price_per_win?: number;
+    target_wins?: number;
+    account_username?: string;
+    special_instructions?: string;
+  }, token: string) =>
+    apiCall<{
+      id: number;
+      grind_number: string;
+      pilot_id: number;
+      customer_id: number;
+      game: string;
+      service_type: string;
+      starting_tier_id: number;
+      target_tier_id: number;
+      total_tiers: number;
+      base_price: string;
+      final_price: string;
+      status: string;
+      progress_percentage: number;
+      current_tier: string;
+      account_username: string;
+      special_instructions: string;
+      started_at: string;
+      completed_at: string | null;
+      created_at: string;
+      updated_at: string;
+    }>('/grinds', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token),
+
+  /**
+   * Fetch all grinds for the authenticated pilot (requires token)
+   */
+  fetchGrinds: async (token: string) =>
+    apiCall<{
+      id: number;
+      grind_number: string;
+      customer_id: number;
+      game: string;
+      service_type: string;
+      status: string;
+      progress_percentage: number;
+      base_price: string;
+      final_price: string;
+      customer: {
+        id: number;
+        display_name: string;
+      };
+      created_at: string;
+    }[]>('/grinds', {
+      method: 'GET',
     }, token),
 };
 

@@ -17,6 +17,9 @@ interface DeleteConfirmationModalProps {
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmText?: string;
+  iconName?: string;
+  isDangerous?: boolean;
 }
 
 export function DeleteConfirmationModal({
@@ -26,6 +29,9 @@ export function DeleteConfirmationModal({
   loading = false,
   onConfirm,
   onCancel,
+  confirmText = 'Delete',
+  iconName = 'trash',
+  isDangerous = true,
 }: DeleteConfirmationModalProps) {
   const theme = useTheme();
 
@@ -102,6 +108,10 @@ export function DeleteConfirmationModal({
       backgroundColor: theme.colors.primary,
       borderColor: theme.colors.primary,
     },
+    confirmButtonDangerous: {
+      backgroundColor: theme.colors.statusDanger,
+      borderColor: theme.colors.statusDanger,
+    },
     cancelButtonText: {
       fontSize: 14,
       fontFamily: 'DMMono',
@@ -127,7 +137,7 @@ export function DeleteConfirmationModal({
         <View style={styles.modalView}>
           {/* Icon */}
           <View style={styles.iconContainer}>
-            <Ionicons name="trash" size={32} color={theme.colors.primary} />
+            <Ionicons name={iconName as any} size={32} color={isDangerous ? theme.colors.statusDanger : theme.colors.primary} />
           </View>
 
           {/* Title */}
@@ -146,14 +156,17 @@ export function DeleteConfirmationModal({
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
             <Pressable
-              style={[styles.button, styles.confirmButton]}
+              style={[
+                styles.button,
+                isDangerous ? styles.confirmButtonDangerous : styles.confirmButton,
+              ]}
               onPress={onConfirm}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Text style={styles.confirmButtonText}>Delete</Text>
+                <Text style={styles.confirmButtonText}>{confirmText}</Text>
               )}
             </Pressable>
           </View>

@@ -264,7 +264,30 @@ export const authApi = {
       profile_image_url: string | null;
       is_active: boolean;
       joined_at: string;
+      fingerprint_enrolled: boolean;
     }>('/auth/me', {}, token),
+
+  /**
+   * Enroll fingerprint for current user (requires token)
+   */
+  enrollFingerprint: async (token: string) =>
+    apiCall<{
+      message: string;
+      fingerprint_enrolled: boolean;
+    }>('/auth/enroll-fingerprint', {
+      method: 'POST',
+    }, token),
+
+  /**
+   * Disable fingerprint for current user (requires token)
+   */
+  disableFingerprint: async (token: string) =>
+    apiCall<{
+      message: string;
+      fingerprint_enrolled: boolean;
+    }>('/auth/disable-fingerprint', {
+      method: 'POST',
+    }, token),
 };
 
 /**

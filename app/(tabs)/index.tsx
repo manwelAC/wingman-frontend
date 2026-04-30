@@ -159,12 +159,12 @@ export default function DashboardScreen() {
       color: theme.colors.textPrimary,
     },
     profileButton: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
+      width: 44,
+      height: 44,
+      borderRadius: 999,
       borderWidth: 1.5,
       borderColor: theme.colors.border,
-      paddingVertical: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.md,
+      backgroundColor: theme.colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -385,11 +385,7 @@ export default function DashboardScreen() {
           <Text style={styles.greeting}>Welcome back, Pilot</Text>
           <Pressable
             style={styles.profileButton}
-            onPress={() => {
-              const currentRoute = '';
-              const params = { screen: 'profile' };
-              console.log('Navigating to profile');
-            }}
+            onPress={() => router.push('/(tabs)/profile')}
           >
             <Ionicons name="person" size={22} color={theme.colors.primary} />
           </Pressable>

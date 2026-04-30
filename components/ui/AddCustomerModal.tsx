@@ -3,15 +3,15 @@ import { customerApi } from '@/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { Button } from './Button';
 import { SuccessModal } from './SuccessModal';
@@ -163,7 +163,8 @@ export function AddCustomerModal({
       flex: 1,
     },
     fieldGroup: {
-      gap: 0,
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
     },
     label: {
       fontSize: 13,
@@ -171,7 +172,8 @@ export function AddCustomerModal({
       fontWeight: 'bold',
       color: theme.colors.textSecondary,
       textTransform: 'uppercase',
-      marginBottom: theme.spacing.sm,
+      marginBottom: theme.spacing.xs,
+      letterSpacing: 0.5,
     },
     input: {
       backgroundColor: theme.colors.surface,

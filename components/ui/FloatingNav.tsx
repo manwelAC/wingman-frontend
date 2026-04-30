@@ -1,8 +1,9 @@
 import { useTheme } from '@/constants/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useSegments } from 'expo-router';
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import AIChat from './AIChat';
 
 interface NavItem {
   label: string;
@@ -22,6 +23,12 @@ export default function FloatingNav() {
   const theme = useTheme();
   const router = useRouter();
   const segments = useSegments();
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<'log' | 'ai' | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const isLongPress = useRef(false);
 
   // Determine active tab based on current route
   const currentRoute = `/(tabs)/${segments[1] || ''}`.replace(/\/$/, '');
@@ -30,6 +37,56 @@ export default function FloatingNav() {
       ? true
       : item.href === currentRoute
   );
+
+  const handleLogPressIn = () => {
+    isLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      setShowLogModal(true);
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
+    }, 500); // 500ms long press
+  };
+
+  const handleLogPressOut = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleLogPress = () => {
+    // Only navigate if it wasn't a long press
+    if (!isLongPress.current && !showLogModal) {
+      router.push('/(tabs)/log-grind');
+    }
+  };
+
+  const handleOptionSelect = (option: 'log' | 'ai') => {
+    isLongPress.current = false;
+    setSelectedOption(option);
+
+    // Animate modal closing
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowLogModal(false);
+      scaleAnim.setValue(0);
+
+      if (option === 'log') {
+        router.push('/(tabs)/log-grind');
+      } else if (option === 'ai') {
+        setShowAIChat(true);
+      }
+
+      setSelectedOption(null);
+    });
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -80,11 +137,9 @@ export default function FloatingNav() {
             <Pressable
               key={item.href}
               style={styles.logGrindButton}
-              onPress={() => {
-                if (!isActive) {
-                  router.push(item.href);
-                }
-              }}
+              onPressIn={handleLogPressIn}
+              onPressOut={handleLogPressOut}
+              onPress={handleLogPress}
             >
               <Ionicons
                 name={item.icon as any}
@@ -113,6 +168,141 @@ export default function FloatingNav() {
           </Pressable>
         );
       })}
+
+      {/* Log Options Modal */}
+      <Modal
+        visible={showLogModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowLogModal(false);
+          scaleAnim.setValue(0);
+          setSelectedOption(null);
+        }}
+      >
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+          onPress={() => {
+            setShowLogModal(false);
+            scaleAnim.setValue(0);
+            setSelectedOption(null);
+          }}
+        >
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  scale: scaleAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.3, 1],
+                  }),
+                },
+              ],
+            }}
+          >
+            <Pressable
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderRadius: 20,
+                borderWidth: 1.5,
+                borderColor: theme.colors.border,
+                paddingVertical: theme.spacing.lg,
+                paddingHorizontal: theme.spacing.lg,
+                gap: theme.spacing.md,
+                minWidth: 240,
+              }}
+              onPress={() => {
+                // Prevent closing when clicking inside modal
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontFamily: 'DMMono-Medium',
+                  fontWeight: 'bold',
+                  color: theme.colors.textPrimary,
+                  textAlign: 'center',
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                Choose Action
+              </Text>
+
+              {/* Log Grind Option */}
+              <Pressable
+                style={{
+                  backgroundColor: selectedOption === 'log' ? theme.colors.primary : theme.colors.primary + '30',
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: theme.colors.primary,
+                  paddingVertical: theme.spacing.md,
+                  paddingHorizontal: theme.spacing.lg,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: theme.spacing.md,
+                }}
+                onPress={() => handleOptionSelect('log')}
+              >
+                <Ionicons
+                  name="game-controller"
+                  size={20}
+                  color={selectedOption === 'log' ? '#FFFFFF' : theme.colors.primary}
+                />
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontFamily: 'DMMono-Medium',
+                    fontWeight: 'bold',
+                    color: selectedOption === 'log' ? '#FFFFFF' : theme.colors.primary,
+                  }}
+                >
+                  Log Grind
+                </Text>
+              </Pressable>
+
+              {/* AI Chat Option */}
+              <Pressable
+                style={{
+                  backgroundColor: selectedOption === 'ai' ? theme.colors.primary : theme.colors.primary + '30',
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: theme.colors.primary,
+                  paddingVertical: theme.spacing.md,
+                  paddingHorizontal: theme.spacing.lg,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: theme.spacing.md,
+                }}
+                onPress={() => handleOptionSelect('ai')}
+              >
+                <Ionicons
+                  name="sparkles"
+                  size={20}
+                  color={selectedOption === 'ai' ? '#FFFFFF' : theme.colors.primary}
+                />
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontFamily: 'DMMono-Medium',
+                    fontWeight: 'bold',
+                    color: selectedOption === 'ai' ? '#FFFFFF' : theme.colors.primary,
+                  }}
+                >
+                  AI Assistant
+                </Text>
+              </Pressable>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
+
+      {/* AI Chat Component */}
+      <AIChat visible={showAIChat} onClose={() => setShowAIChat(false)} />
     </View>
   );
 }

@@ -18,6 +18,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Grind {
   id: number;
@@ -43,6 +44,7 @@ const STATUS_OPTIONS = ['all', 'not_started', 'in_progress', 'completed', 'cance
 
 export default function GrindsScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [grinds, setGrinds] = useState<Grind[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -273,11 +275,11 @@ export default function GrindsScreen() {
       fontFamily: 'DMMono',
       fontWeight: 'bold',
       color: theme.colors.textPrimary,
-      paddingVertical: theme.spacing.xl,
-      marginBottom: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      marginBottom: theme.spacing.md,
     },
     searchContainer: {
-      marginBottom: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
     },
     searchInput: {
       backgroundColor: theme.colors.surface,
@@ -293,7 +295,7 @@ export default function GrindsScreen() {
       alignItems: 'center',
     },
     filterContainer: {
-      marginBottom: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
     },
     filterLabel: {
       fontSize: 12,
@@ -332,7 +334,7 @@ export default function GrindsScreen() {
     },
     content: {
       paddingHorizontal: theme.spacing.xl,
-      paddingBottom: 120,
+      paddingBottom: 180 + insets.bottom,
     },
     grindCard: {
       backgroundColor: theme.colors.surface,

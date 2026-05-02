@@ -186,6 +186,31 @@ export const authApi = {
     }),
 
   /**
+   * Trust a location after email verification (requires token)
+   */
+  trustLocation: async (payload: { city: string; country: string }, token: string) =>
+    apiCall<{
+      message: string;
+      trusted_locations: string[];
+    }>('/auth/trust-location', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token),
+
+  /**
+   * Get user's location from backend secure endpoint
+   * Uses request IP to determine city and country
+   * Backend handles API credentials securely
+   */
+  getLocation: async () =>
+    apiCall<{
+      city: string;
+      country: string;
+    }>('/auth/get-location', {
+      method: 'GET',
+    }),
+
+  /**
    * Resend verification code
    */
   resendCode: async (email: string) =>
@@ -199,8 +224,13 @@ export const authApi = {
    */
   login: async (payload: { email: string; password: string }) =>
     apiCall<{
-      token: string;
-      user: {
+      token?: string;
+      message: string;
+      vpn_detected?: boolean;
+      require_location_verification?: boolean;
+      unverified?: boolean;
+      email?: string;
+      user?: {
         id: number;
         username: string;
         user_type: string;
@@ -209,6 +239,7 @@ export const authApi = {
         games_expertise: string[];
         is_verified: boolean;
         profile_image_url: string | null;
+        fingerprint_enrolled?: boolean;
       };
     }>('/auth/login', {
       method: 'POST',
@@ -223,8 +254,13 @@ export const authApi = {
    */
   loginWithFingerprint: async (emailOrUsername: string) =>
     apiCall<{
-      token: string;
-      user: {
+      token?: string;
+      message: string;
+      vpn_detected?: boolean;
+      require_location_verification?: boolean;
+      unverified?: boolean;
+      email?: string;
+      user?: {
         id: number;
         username: string;
         user_type: string;
@@ -233,8 +269,8 @@ export const authApi = {
         games_expertise: string[];
         is_verified: boolean;
         profile_image_url: string | null;
+        fingerprint_enrolled?: boolean;
       };
-      unverified?: boolean;
     }>('/auth/login-fingerprint', {
       method: 'POST',
       body: JSON.stringify({ email_or_username: emailOrUsername }),

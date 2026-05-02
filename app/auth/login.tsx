@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/Button';
+import { SecurityErrorModal } from '@/components/ui/SecurityErrorModal';
 import { TextInput } from '@/components/ui/TextInput';
 import { useTheme } from '@/constants/useTheme';
 import { authApi } from '@/services/api';
@@ -43,6 +44,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [fingerprintLoading, setFingerprintLoading] = useState(false);
+  const [vpnModalVisible, setVpnModalVisible] = useState(false);
 
   // Check if device supports biometrics on component mount
   useEffect(() => {
@@ -162,12 +164,30 @@ export default function LoginScreen() {
         return;
       }
 
-      // Check if user is unverified (status 200 with unverified flag)
-      if (response.data?.unverified) {
-        // User exists but email not verified - redirect to verify email
+      // VPN Detection - Hard Block
+      if (response.data?.vpn_detected) {
+        setVpnModalVisible(true);
+        return;
+      }
+
+      // Anomalous Location Detection - Requires email verification
+      if (response.data?.require_location_verification) {
         router.push({
           pathname: '/auth/verify-email',
-          params: { email: response.data.user?.email || formData.emailOrUsername.trim() },
+          params: {
+            email: response.data.email || response.data.user?.email || formData.emailOrUsername.trim(),
+            userId: response.data.user?.id,
+            isNewLocation: 'true',
+          },
+        });
+        return;
+      }
+
+      // Regular unverified email
+      if (response.data?.unverified && !response.data?.require_location_verification) {
+        router.push({
+          pathname: '/auth/verify-email',
+          params: { email: response.data.email || response.data.user?.email || formData.emailOrUsername.trim() },
         });
         return;
       }
@@ -225,6 +245,25 @@ export default function LoginScreen() {
       if (!response.success) {
         setErrors({
           general: response.message || 'Fingerprint login failed. Please try again.',
+        });
+        return;
+      }
+
+      // VPN Detection - Hard Block
+      if (response.data?.vpn_detected) {
+        setVpnModalVisible(true);
+        return;
+      }
+
+      // Anomalous Location Detection - Requires email verification
+      if (response.data?.require_location_verification) {
+        router.push({
+          pathname: '/auth/verify-email',
+          params: {
+            email: response.data.email || response.data.user?.email || formData.emailOrUsername.trim(),
+            userId: response.data.user?.id,
+            isNewLocation: 'true',
+          },
         });
         return;
       }
@@ -427,6 +466,16 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* VPN Detection Error Modal */}
+      <SecurityErrorModal
+        visible={vpnModalVisible}
+        type="vpn"
+        title="⚠️ VPN Detected"
+        message="Please disable your VPN to login."
+        onDismiss={() => setVpnModalVisible(false)}
+        actionLabel="OK"
+      />
     </SafeAreaView>
   );
 }

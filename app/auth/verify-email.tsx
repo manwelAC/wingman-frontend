@@ -126,7 +126,7 @@ export default function VerifyEmailScreen() {
         return;
       }
 
-      // Success! Save token and navigate to dashboard
+      // Success! Save token and user
       if (response.data?.token) {
         await AsyncStorage.setItem('authToken', response.data.token);
         await AsyncStorage.setItem(
@@ -134,8 +134,46 @@ export default function VerifyEmailScreen() {
           JSON.stringify(response.data.user)
         );
 
-        // Navigate to dashboard
-        router.replace('/(tabs)');
+        // If this was a new location login, fetch location from backend and trust it
+        if (params.isNewLocation === 'true') {
+          try {
+            // Get user's location from backend (secure endpoint)
+            const locationResponse = await authApi.getLocation();
+            
+            if (locationResponse.success && locationResponse.data) {
+              // Trust the location with backend data
+              const trustResponse = await authApi.trustLocation(
+                {
+                  city: locationResponse.data.city,
+                  country: locationResponse.data.country,
+                },
+                response.data.token
+              );
+
+              if (trustResponse.success) {
+                // Show success message
+                console.log('✅ Location trusted successfully');
+                router.replace('/(tabs)');
+              } else {
+                // Even if trust-location fails, user is verified, so proceed
+                console.warn('Trust location failed, but email verified:', trustResponse.message);
+                router.replace('/(tabs)');
+              }
+            } else {
+              // Even if location fetch fails, user is verified, so proceed
+              console.warn('Location fetch failed, but email verified');
+              router.replace('/(tabs)');
+            }
+          } catch (trustError) {
+            console.error('Error during location trust process:', trustError);
+            // Even if trust-location process fails, user is verified, so proceed
+            router.replace('/(tabs)');
+          }
+        } else {
+          // Regular email verification (not a new location)
+          console.log('✅ Email verified successfully');
+          router.replace('/(tabs)');
+        }
       }
     } catch (error) {
       console.error('Verification error:', error);
@@ -192,9 +230,15 @@ export default function VerifyEmailScreen() {
       >
         <Text style={styles.title}>Verify your email</Text>
         <Text style={styles.description}>
-          We sent a 6-digit code to{' '}
-          <Text style={styles.email}>{email}</Text>. Enter it below to
-          activate your account.
+          {params.isNewLocation === 'true'
+            ? '📍 We detected a login from a new location. Please verify your email to continue.'
+            : `We sent a 6-digit code to `}
+          {params.isNewLocation !== 'true' && (
+            <>
+              <Text style={styles.email}>{email}</Text>
+              {'. Enter it below to activate your account.'}
+            </>
+          )}
         </Text>
 
         {/* General Error */}

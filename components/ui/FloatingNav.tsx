@@ -28,6 +28,7 @@ export default function FloatingNav() {
   const [selectedOption, setSelectedOption] = useState<'log' | 'ai' | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scaleAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   const isLongPress = useRef(false);
 
   // Determine active tab based on current route
@@ -43,8 +44,14 @@ export default function FloatingNav() {
     longPressTimer.current = setTimeout(() => {
       isLongPress.current = true;
       setShowLogModal(true);
+      fadeAnim.setValue(0);
       Animated.spring(scaleAnim, {
         toValue: 1,
+        useNativeDriver: true,
+      }).start();
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
         useNativeDriver: true,
       }).start();
     }, 500); // 500ms long press
@@ -68,15 +75,15 @@ export default function FloatingNav() {
     isLongPress.current = false;
     setSelectedOption(option);
 
-    // Animate modal closing
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    // Animate modal closing with fade
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
       setShowLogModal(false);
       scaleAnim.setValue(0);
+      fadeAnim.setValue(0);
 
       if (option === 'log') {
         router.push('/(tabs)/log-grind');
@@ -177,6 +184,7 @@ export default function FloatingNav() {
         onRequestClose={() => {
           setShowLogModal(false);
           scaleAnim.setValue(0);
+          fadeAnim.setValue(0);
           setSelectedOption(null);
         }}
       >
@@ -190,6 +198,7 @@ export default function FloatingNav() {
           onPress={() => {
             setShowLogModal(false);
             scaleAnim.setValue(0);
+            fadeAnim.setValue(0);
             setSelectedOption(null);
           }}
         >
@@ -203,6 +212,7 @@ export default function FloatingNav() {
                   }),
                 },
               ],
+              opacity: fadeAnim,
             }}
           >
             <Pressable

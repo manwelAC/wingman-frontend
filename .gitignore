@@ -9,8 +9,7 @@ node_modules/
 .env.*.local
 docs
 
-references
-
+wingman-backend
 # Expo
 .expo/
 dist/

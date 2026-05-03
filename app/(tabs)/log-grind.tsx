@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/Button';
 import FloatingNav from '@/components/ui/FloatingNav';
 import { SuccessModal } from '@/components/ui/SuccessModal';
 import { useTheme } from '@/constants/useTheme';
-import { calculatorApi, customerApi, gameApi, grindApi } from '@/services/api';
+import { calculatorApi, customerApi, gameApi, grindApi, paymentMethodApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -57,6 +57,9 @@ export default function LogGrindScreen() {
   const [accountUsername, setAccountUsername] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>(null);
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [availableMethods, setAvailableMethods] = useState<any[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successGrindNumber, setSuccessGrindNumber] = useState('');
   const [successCustomerName, setSuccessCustomerName] = useState('');
@@ -65,6 +68,7 @@ export default function LogGrindScreen() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showStartTierModal, setShowStartTierModal] = useState(false);
   const [showTargetTierModal, setShowTargetTierModal] = useState(false);
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
 
   // Load data when screen is focused
   useFocusEffect(
@@ -92,6 +96,33 @@ export default function LogGrindScreen() {
       const tiersRes = await gameApi.fetchRankTiers(selectedGame, token);
       if (tiersRes.success && tiersRes.data) {
         setGameTiers(tiersRes.data.tiers.sort((a, b) => a.tier_order - b.tier_order));
+      }
+
+      // Fetch available payment method types
+      const availableRes = await paymentMethodApi.getAvailableMethods(token);
+      if (availableRes.success && availableRes.data && availableRes.data.data) {
+        const allAvailable = [
+          ...(availableRes.data.data.e_wallet || []),
+          ...(availableRes.data.data.bank_transfer || []),
+          ...(availableRes.data.data.credit_card || []),
+        ];
+        setAvailableMethods(allAvailable);
+      }
+
+      // Fetch user's payment methods
+      const paymentRes = await paymentMethodApi.getUserMethods(token);
+      if (paymentRes.success && paymentRes.data && paymentRes.data.data) {
+        const allMethods = [
+          ...(paymentRes.data.data.e_wallet || []),
+          ...(paymentRes.data.data.bank_transfer || []),
+          ...(paymentRes.data.data.credit_card || []),
+        ];
+        setPaymentMethods(allMethods);
+        // Auto-select first active payment method
+        const activeMethod = allMethods.find((m: any) => m.is_active);
+        if (activeMethod) {
+          setSelectedPaymentMethod(activeMethod);
+        }
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -134,7 +165,7 @@ export default function LogGrindScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedCustomer || !startingTier || !targetTier || totalPrice === 0) {
+    if (!selectedCustomer || !startingTier || !targetTier || totalPrice === 0 || !selectedPaymentMethod) {
       alert('Please fill in all required fields and wait for price calculation');
       return;
     }
@@ -158,6 +189,7 @@ export default function LogGrindScreen() {
           final_price: totalPrice,
           account_username: accountUsername,
           special_instructions: specialInstructions,
+          payment_method_id: selectedPaymentMethod.id,
         },
         token
       );
@@ -366,6 +398,9 @@ export default function LogGrindScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={{ marginTop: theme.spacing.lg, fontSize: 16, fontFamily: 'DMMono', fontWeight: 'bold', color: theme.colors.textPrimary }}>
+            Switching to {selectedGame}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -383,6 +418,31 @@ export default function LogGrindScreen() {
           <Pressable style={styles.selector} onPress={() => setShowCustomerModal(true)}>
             <Text style={[styles.selectorText, !selectedCustomer && styles.selectorPlaceholder]}>
               {selectedCustomer ? selectedCustomer.display_name : 'Select a customer'}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color={theme.colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        {/* Payment Method Selection */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Payment Method *</Text>
+          <Pressable style={styles.selector} onPress={() => setShowPaymentMethodModal(true)}>
+            <Text style={[styles.selectorText, !selectedPaymentMethod && styles.selectorPlaceholder]}>
+              {selectedPaymentMethod ? (() => {
+                const methodType = availableMethods.find(m => m.id === selectedPaymentMethod.payment_method_type_id);
+                return (
+                  <View>
+                    <Text style={styles.selectorText}>
+                      {methodType?.name || 'Unknown'}
+                    </Text>
+                    {selectedPaymentMethod.account_holder_name && (
+                      <Text style={[styles.label, { marginTop: 4 }]}>
+                        {selectedPaymentMethod.account_holder_name}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })() : 'Select payment method'}
             </Text>
             <Ionicons name="chevron-down" size={20} color={theme.colors.textSecondary} />
           </Pressable>
@@ -519,7 +579,7 @@ export default function LogGrindScreen() {
             onPress={handleSubmit}
             variant="primary"
             fullWidth
-            disabled={submitting || !selectedCustomer || !startingTier || !targetTier || totalPrice === 0 || calculatingPrice}
+            disabled={submitting || !selectedCustomer || !startingTier || !targetTier || totalPrice === 0 || calculatingPrice || !selectedPaymentMethod}
           />
         </View>
       </ScrollView>
@@ -608,6 +668,56 @@ export default function LogGrindScreen() {
                   <Text style={styles.modalItemText}>{tier.tier_name}</Text>
                 </Pressable>
               ))}
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Payment Method Modal */}
+      <Modal
+        visible={showPaymentMethodModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowPaymentMethodModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: theme.spacing.xl }}>
+            <Text style={styles.modalTitle}>Select Payment Method</Text>
+            {paymentMethods.length === 0 ? (
+              <Text style={[styles.modalItemText, { textAlign: 'center', padding: theme.spacing.lg, color: theme.colors.textSecondary }]}>
+                No payment methods available. Please add one in your profile.
+              </Text>
+            ) : (
+              paymentMethods.map((method) => {
+                const methodType = availableMethods.find(m => m.id === method.payment_method_type_id);
+                return (
+                  <Pressable
+                    key={method.id}
+                    style={[styles.modalItem, !method.is_active && { opacity: 0.5 }]}
+                    onPress={() => {
+                      if (method.is_active) {
+                        setSelectedPaymentMethod(method);
+                        setShowPaymentMethodModal(false);
+                      }
+                    }}
+                    disabled={!method.is_active}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.modalItemText}>{methodType?.name || 'Unknown'}</Text>
+                        {method.account_holder_name && (
+                          <Text style={[styles.modalItemText, { fontSize: 12, color: theme.colors.textSecondary, marginTop: 4 }]}>
+                            {method.account_holder_name}
+                          </Text>
+                        )}
+                      </View>
+                      {!method.is_active && (
+                        <Text style={{ fontSize: 10, color: theme.colors.statusDanger, fontWeight: 'bold' }}>Disabled</Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })
+            )}
           </ScrollView>
         </View>
       </Modal>

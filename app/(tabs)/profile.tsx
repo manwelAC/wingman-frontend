@@ -3,7 +3,7 @@ import { DeleteConfirmationModal } from '@/components/ui/DeleteConfirmationModal
 import FloatingNav from '@/components/ui/FloatingNav';
 import { SuccessModal } from '@/components/ui/SuccessModal';
 import { useTheme } from '@/constants/useTheme';
-import { authApi } from '@/services/api';
+import { authApi, paymentMethodApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -50,9 +50,19 @@ export default function ProfileScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Payment Methods State
+  const [availableMethods, setAvailableMethods] = useState<any[]>([]);
+  const [userPaymentMethods, setUserPaymentMethods] = useState<any>({
+    e_wallet: [],
+    bank_transfer: [],
+    credit_card: [],
+  });
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
+
   useFocusEffect(
     React.useCallback(() => {
       loadProfile();
+      loadPaymentMethods();
       checkBiometricAvailability();
     }, [])
   );
@@ -197,6 +207,41 @@ export default function ProfileScreen() {
       setErrorMessage('Failed to logout. Please try again.');
     } finally {
       setLoggingOut(false);
+    }
+  };
+
+  // Payment Methods Handlers
+  const loadPaymentMethods = async () => {
+    try {
+      setLoadingPaymentMethods(true);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) return;
+
+      const [availableRes, userRes] = await Promise.all([
+        paymentMethodApi.getAvailableMethods(token),
+        paymentMethodApi.getUserMethods(token),
+      ]);
+
+      if (availableRes.success && availableRes.data && availableRes.data.data) {
+        const allMethods = [
+          ...(availableRes.data.data.e_wallet || []),
+          ...(availableRes.data.data.bank_transfer || []),
+          ...(availableRes.data.data.credit_card || []),
+        ];
+        setAvailableMethods(allMethods);
+      }
+
+      if (userRes.success && userRes.data && userRes.data.data) {
+        setUserPaymentMethods({
+          e_wallet: userRes.data.data.e_wallet || [],
+          bank_transfer: userRes.data.data.bank_transfer || [],
+          credit_card: userRes.data.data.credit_card || [],
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load payment methods:', error);
+    } finally {
+      setLoadingPaymentMethods(false);
     }
   };
 
@@ -487,6 +532,171 @@ export default function ProfileScreen() {
                 </View>
               </View>
             </View>
+
+            {/* Payment Methods Section */}
+            <Text style={styles.sectionTitle}>Payment Methods</Text>
+
+            <Pressable
+              onPress={() => router.push('/payment-methods')}
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderRadius: 16,
+                borderWidth: 1.5,
+                borderColor: theme.colors.border,
+                padding: theme.spacing.lg,
+                marginBottom: theme.spacing.lg,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: theme.spacing.lg,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontFamily: 'DMMono',
+                    fontWeight: 'bold',
+                    color: theme.colors.textPrimary,
+                  }}
+                >
+                  Your Payment Methods
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+              </View>
+
+              {loadingPaymentMethods ? (
+                <ActivityIndicator
+                  size="small"
+                  color={theme.colors.primary}
+                  style={{ paddingVertical: theme.spacing.lg }}
+                />
+              ) : (() => {
+                const allMethods = [
+                  ...userPaymentMethods.e_wallet,
+                  ...userPaymentMethods.bank_transfer,
+                  ...userPaymentMethods.credit_card,
+                ];
+                const displayMethods = allMethods.slice(0, 3);
+
+                return displayMethods.length === 0 ? (
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontFamily: 'DMMono',
+                      color: theme.colors.textSecondary,
+                      textAlign: 'center',
+                      paddingVertical: theme.spacing.lg,
+                    }}
+                  >
+                    No payment methods yet
+                  </Text>
+                ) : (
+                  <View>
+                    {displayMethods.map((method: any) => {
+                      const methodType = availableMethods.find(
+                        m => m.id === method.payment_method_type_id
+                      );
+                      return (
+                        <View
+                          key={method.id}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: theme.spacing.sm,
+                            marginBottom:
+                              displayMethods.indexOf(method) < displayMethods.length - 1
+                                ? theme.spacing.sm
+                                : 0,
+                            borderBottomWidth:
+                              displayMethods.indexOf(method) < displayMethods.length - 1
+                                ? 1
+                                : 0,
+                            borderBottomColor: theme.colors.border,
+                          }}
+                        >
+                          <View
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 6,
+                              backgroundColor: theme.colors.primary + '20',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              marginRight: theme.spacing.md,
+                            }}
+                          >
+                            <Ionicons
+                              name={methodType?.icon_name as any}
+                              size={16}
+                              color={theme.colors.primary}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                fontFamily: 'DMMono',
+                                fontWeight: 'bold',
+                                color: theme.colors.textPrimary,
+                              }}
+                            >
+                              {methodType?.name || 'Unknown'}
+                            </Text>
+                            {method.account_holder_name && (
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  fontFamily: 'DMMono',
+                                  color: theme.colors.textSecondary,
+                                }}
+                              >
+                                {method.account_holder_name}
+                              </Text>
+                            )}
+                          </View>
+                          {!method.is_active && (
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                fontFamily: 'DMMono',
+                                color: theme.colors.statusDanger,
+                                paddingVertical: 2,
+                                paddingHorizontal: 6,
+                                backgroundColor: theme.colors.statusDanger + '20',
+                                borderRadius: 4,
+                              }}
+                            >
+                              Disabled
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })}
+                    {allMethods.length > 3 && (
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontFamily: 'DMMono',
+                          color: theme.colors.primary,
+                          marginTop: theme.spacing.md,
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        + {allMethods.length - 3} more
+                      </Text>
+                    )}
+                  </View>
+                );
+              })()}
+            </Pressable>
 
             {/* Fingerprint Section */}
             <Text style={styles.sectionTitle}>Security</Text>

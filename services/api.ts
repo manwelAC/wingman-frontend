@@ -612,6 +612,7 @@ export const grindApi = {
     target_wins?: number;
     account_username?: string;
     special_instructions?: string;
+    payment_method_id?: number;
   }, token: string) =>
     apiCall<{
       id: number;
@@ -704,6 +705,172 @@ export const grindApi = {
     }>(`/grinds/${grindId}/complete`, {
       method: 'POST',
     }, token),
+};
+
+/**
+ * Payment Methods API Calls
+ */
+export const paymentMethodApi = {
+  /**
+   * Get all available payment methods (requires token)
+   */
+  getAvailableMethods: async (token: string) =>
+    apiCall<{
+      data: {
+        e_wallet: Array<{
+          id: number;
+          code: string;
+          name: string;
+          category: string;
+          icon_name: string;
+          description: string;
+          is_active: boolean;
+        }>;
+        bank_transfer: Array<{
+          id: number;
+          code: string;
+          name: string;
+          category: string;
+          icon_name: string;
+          description: string;
+          is_active: boolean;
+        }>;
+        credit_card: Array<{
+          id: number;
+          code: string;
+          name: string;
+          category: string;
+          icon_name: string;
+          description: string;
+          is_active: boolean;
+        }>;
+      };
+    }>('/payment-methods/available', {}, token),
+
+  /**
+   * Get user's configured payment methods (requires token)
+   */
+  getUserMethods: async (token: string) =>
+    apiCall<{
+      data: {
+        e_wallet: Array<{
+          id: number;
+          payment_method_type_id: number;
+          account_identifier: string | null;
+          account_holder_name: string | null;
+          is_preferred: boolean;
+          is_active: boolean;
+          paymentMethodType: {
+            id: number;
+            code: string;
+            name: string;
+            category: string;
+            icon_name: string;
+          };
+        }>;
+        bank_transfer: Array<any>;
+        credit_card: Array<any>;
+      };
+    }>('/payment-methods', {}, token),
+
+  /**
+   * Add a new payment method (requires token)
+   */
+  addPaymentMethod: async (payload: {
+    payment_method_type_id: number;
+    account_identifier?: string;
+    account_holder_name?: string;
+  }, token: string) =>
+    apiCall<{
+      id: number;
+      user_id: number;
+      payment_method_type_id: number;
+      account_identifier: string | null;
+      account_holder_name: string | null;
+      is_preferred: boolean;
+      is_active: boolean;
+      paymentMethodType: {
+        id: number;
+        code: string;
+        name: string;
+        category: string;
+        icon_name: string;
+      };
+    }>('/payment-methods', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token),
+
+  /**
+   * Update payment method details (requires token)
+   */
+  updatePaymentMethod: async (id: number, payload: {
+    account_identifier?: string;
+    account_holder_name?: string;
+  }, token: string) =>
+    apiCall<{
+      id: number;
+      user_id: number;
+      payment_method_type_id: number;
+      account_identifier: string | null;
+      account_holder_name: string | null;
+      is_preferred: boolean;
+      is_active: boolean;
+      paymentMethodType: {
+        id: number;
+        code: string;
+        name: string;
+        category: string;
+        icon_name: string;
+      };
+    }>(`/payment-methods/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }, token),
+
+  /**
+   * Toggle payment method active status (requires token)
+   */
+  togglePaymentMethod: async (id: number, isActive: boolean, token: string) =>
+    apiCall<null>(`/payment-methods/${id}/toggle`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: isActive }),
+    }, token),
+
+  /**
+   * Set payment method as preferred (requires token)
+   */
+  setPreferredPaymentMethod: async (id: number, token: string) =>
+    apiCall<null>(`/payment-methods/${id}/set-preferred`, {
+      method: 'PATCH',
+    }, token),
+
+  /**
+   * Delete a payment method (requires token)
+   */
+  deletePaymentMethod: async (id: number, token: string) =>
+    apiCall<null>(`/payment-methods/${id}`, {
+      method: 'DELETE',
+    }, token),
+
+  /**
+   * Get payment methods for grind logging (requires token)
+   */
+  getPaymentMethodsForGrind: async (token: string) =>
+    apiCall<{
+      e_wallet?: Array<{
+        id: number;
+        type_id: number;
+        name: string;
+        code: string;
+        category: string;
+        icon: string;
+        account_holder: string | null;
+        is_preferred: boolean;
+      }>;
+      bank_transfer?: Array<any>;
+      credit_card?: Array<any>;
+    }>('/payment-methods/for-grind', {}, token),
 };
 
 export default authApi;

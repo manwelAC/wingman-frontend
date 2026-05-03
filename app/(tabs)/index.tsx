@@ -445,18 +445,20 @@ export default function DashboardScreen() {
             </View>
 
             {/* Total Earned Card */}
-            <View style={[styles.statCard, styles.statCardPrimary]}>
-              <Ionicons
-                name="wallet-outline"
-                size={24}
-                color="#FFFFFF"
-                style={styles.statIcon}
-              />
-              <Text style={[styles.statValue, styles.statValueLight]}>
-                ₱{stats.totalEarned.toFixed(2)}
-              </Text>
-              <Text style={[styles.statLabel, styles.statLabelLight]}>Total Earned</Text>
-            </View>
+            <Pressable onPress={() => router.push('/(tabs)/wallet')}>
+              <View style={[styles.statCard, styles.statCardPrimary]}>
+                <Ionicons
+                  name="wallet-outline"
+                  size={24}
+                  color="#FFFFFF"
+                  style={styles.statIcon}
+                />
+                <Text style={[styles.statValue, styles.statValueLight]}>
+                  ₱{stats.totalEarned.toFixed(2)}
+                </Text>
+                <Text style={[styles.statLabel, styles.statLabelLight]}>Total Earned</Text>
+              </View>
+            </Pressable>
 
             {/* Active Grinds Section */}
             {activeGrinds.length > 0 && (

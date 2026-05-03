@@ -12,6 +12,7 @@ export default function TabLayout() {
       <Stack.Screen name="grinds" />
       <Stack.Screen name="log-grind" />
       <Stack.Screen name="customers" />
+      <Stack.Screen name="wallet" />
       <Stack.Screen name="pricing-setup" />
     </Stack>
   );

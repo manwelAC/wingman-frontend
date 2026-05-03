@@ -189,7 +189,7 @@ export default function LogGrindScreen() {
           final_price: totalPrice,
           account_username: accountUsername,
           special_instructions: specialInstructions,
-          payment_method_id: selectedPaymentMethod.id,
+          payment_method_type_id: selectedPaymentMethod.payment_method_type_id || selectedPaymentMethod.id,
         },
         token
       );

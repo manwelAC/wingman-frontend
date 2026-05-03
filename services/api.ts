@@ -612,7 +612,7 @@ export const grindApi = {
     target_wins?: number;
     account_username?: string;
     special_instructions?: string;
-    payment_method_id?: number;
+    payment_method_type_id: number;
   }, token: string) =>
     apiCall<{
       id: number;
@@ -634,8 +634,6 @@ export const grindApi = {
       started_at: string | null;
       completed_at: string | null;
       cancelled_at: string | null;
-      started_at: string;
-      completed_at: string | null;
       created_at: string;
       updated_at: string;
     }>('/grinds', {
@@ -871,6 +869,167 @@ export const paymentMethodApi = {
       bank_transfer?: Array<any>;
       credit_card?: Array<any>;
     }>('/payment-methods/for-grind', {}, token),
+};
+
+/**
+ * Wallet API Calls
+ */
+export const walletApi = {
+  /**
+   * Get wallet summary (balance, earnings, withdrawals)
+   * GET /api/wallet (requires token)
+   */
+  getWalletSummary: async (token: string) =>
+    apiCall<{
+      wallet_id: number;
+      balance: number;
+      total_earned: number;
+      total_withdrawn: number;
+      pending_amount: number;
+      last_transaction_at: string | null;
+    }>('/wallet', {}, token),
+
+  /**
+   * Get transaction history with optional filters
+   * GET /api/wallet/transactions (requires token)
+   */
+  getTransactionHistory: async (
+    token: string,
+    page: number = 1,
+    limit: number = 20,
+    type?: string,
+    fromDate?: string,
+    toDate?: string
+  ) => {
+    let endpoint = `/wallet/transactions?page=${page}&limit=${limit}`;
+    if (type) endpoint += `&type=${type}`;
+    if (fromDate) endpoint += `&from_date=${fromDate}`;
+    if (toDate) endpoint += `&to_date=${toDate}`;
+
+    return apiCall<{
+      transactions: Array<{
+        id: number;
+        type: 'earning' | 'deduction' | 'refund' | 'fee' | 'withdrawal';
+        amount: number;
+        balance_after: number;
+        grind_id: number | null;
+        grind_number: string | null;
+        payment_method_type_id: number | null;
+        payment_method_name: string | null;
+        reference_id: string | null;
+        description: string;
+        created_at: string;
+      }>;
+      pagination: {
+        total: number;
+        per_page: number;
+        current_page: number;
+        last_page: number;
+      };
+    }>(endpoint, {}, token);
+  },
+
+  /**
+   * Get earnings summary grouped by payment method category
+   * GET /api/wallet/earnings-by-payment-method (requires token)
+   */
+  getEarningsByPaymentMethod: async (token: string) =>
+    apiCall<{
+      total_balance: number;
+      total_earned: number;
+      earnings_by_method: {
+        e_wallet: Array<{
+          id: number;
+          type_id: number;
+          code: string;
+          name: string;
+          icon: string;
+          category: string;
+          total_earned: number;
+          grind_count: number;
+          last_earned_at: string | null;
+        }>;
+        bank_transfer: Array<{
+          id: number;
+          type_id: number;
+          code: string;
+          name: string;
+          icon: string;
+          category: string;
+          total_earned: number;
+          grind_count: number;
+          last_earned_at: string | null;
+        }>;
+        credit_card: Array<{
+          id: number;
+          type_id: number;
+          code: string;
+          name: string;
+          icon: string;
+          category: string;
+          total_earned: number;
+          grind_count: number;
+          last_earned_at: string | null;
+        }>;
+      };
+    }>('/wallet/earnings-by-payment-method', {}, token),
+
+  /**
+   * Get earnings timeline for specific payment method
+   * GET /api/wallet/earnings-by-payment-method/{payment_method_type_id} (requires token)
+   */
+  getEarningsTimeline: async (
+    token: string,
+    paymentMethodTypeId: number,
+    page: number = 1,
+    limit: number = 20
+  ) =>
+    apiCall<{
+      payment_method: {
+        id: number;
+        code: string;
+        name: string;
+        category: string;
+        icon: string;
+      };
+      summary: {
+        total_earned: number;
+        grind_count: number;
+        last_earned_at: string | null;
+      };
+      timeline: Array<{
+        id: number;
+        grind_number: string;
+        game: string;
+        service_type: 'rank_boost' | 'win_count';
+        starting_tier: string | null;
+        target_tier: string | null;
+        target_stars: number | null;
+        final_price: number;
+        completed_at: string;
+      }>;
+      pagination: {
+        total: number;
+        per_page: number;
+        current_page: number;
+        last_page: number;
+      };
+    }>(`/wallet/earnings-by-payment-method/${paymentMethodTypeId}?page=${page}&limit=${limit}`, {}, token),
+
+  /**
+   * Sync/recalculate wallet from grinds (maintenance endpoint)
+   * POST /api/wallet/sync (requires token)
+   */
+  syncWallet: async (token: string) =>
+    apiCall<{
+      wallet_id: number;
+      balance: number;
+      total_earned: number;
+      transactions_processed: number;
+      message: string;
+    }>('/wallet/sync', {
+      method: 'POST',
+    }, token),
 };
 
 export default authApi;

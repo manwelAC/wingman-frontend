@@ -5,8 +5,7 @@ import { useTheme } from '@/constants/useTheme';
 import { calculatorApi, customerApi, gameApi, grindApi, paymentMethodApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -70,35 +69,61 @@ export default function LogGrindScreen() {
   const [showTargetTierModal, setShowTargetTierModal] = useState(false);
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
 
-  // Load data when screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      loadData();
-    }, [selectedGame])
-  );
+  // Load data on mount and when game changes
+  useEffect(() => {
+    loadInitialData();
+  }, []);
 
-  const loadData = async () => {
+  useEffect(() => {
+    loadGameTiers();
+  }, [selectedGame]);
+
+  const loadInitialData = async () => {
     try {
-      setLoading(true);
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
         console.log('No token found');
         return;
       }
 
-      // Fetch customers
+      // Load customers from cache first
+      const cachedCustomers = await AsyncStorage.getItem('cachedCustomers');
+      if (cachedCustomers) {
+        setCustomers(JSON.parse(cachedCustomers));
+      } else {
+        setLoading(true);
+      }
+
+      // Load available payment methods from cache first
+      const cachedAvailable = await AsyncStorage.getItem('cachedAvailableMethods');
+      if (cachedAvailable) {
+        setAvailableMethods(JSON.parse(cachedAvailable));
+      }
+
+      // Load payment methods from cache first
+      const cachedPaymentMethods = await AsyncStorage.getItem('cachedPaymentMethods');
+      if (cachedPaymentMethods) {
+        const cached = JSON.parse(cachedPaymentMethods);
+        const allMethods = [
+          ...(cached.e_wallet || []),
+          ...(cached.bank_transfer || []),
+          ...(cached.credit_card || []),
+        ];
+        setPaymentMethods(allMethods);
+        const activeMethod = allMethods.find((m: any) => m.is_active);
+        if (activeMethod) {
+          setSelectedPaymentMethod(activeMethod);
+        }
+      }
+
+      // Fetch customers in background
       const customersRes = await customerApi.fetchCustomers(token);
       if (customersRes.success && customersRes.data) {
         setCustomers(customersRes.data);
+        await AsyncStorage.setItem('cachedCustomers', JSON.stringify(customersRes.data));
       }
 
-      // Fetch game tiers for selected game
-      const tiersRes = await gameApi.fetchRankTiers(selectedGame, token);
-      if (tiersRes.success && tiersRes.data) {
-        setGameTiers(tiersRes.data.tiers.sort((a, b) => a.tier_order - b.tier_order));
-      }
-
-      // Fetch available payment method types
+      // Fetch available payment method types in background
       const availableRes = await paymentMethodApi.getAvailableMethods(token);
       if (availableRes.success && availableRes.data && availableRes.data.data) {
         const allAvailable = [
@@ -107,9 +132,10 @@ export default function LogGrindScreen() {
           ...(availableRes.data.data.credit_card || []),
         ];
         setAvailableMethods(allAvailable);
+        await AsyncStorage.setItem('cachedAvailableMethods', JSON.stringify(allAvailable));
       }
 
-      // Fetch user's payment methods
+      // Fetch user's payment methods in background
       const paymentRes = await paymentMethodApi.getUserMethods(token);
       if (paymentRes.success && paymentRes.data && paymentRes.data.data) {
         const allMethods = [
@@ -118,6 +144,7 @@ export default function LogGrindScreen() {
           ...(paymentRes.data.data.credit_card || []),
         ];
         setPaymentMethods(allMethods);
+        await AsyncStorage.setItem('cachedPaymentMethods', JSON.stringify(allMethods));
         // Auto-select first active payment method
         const activeMethod = allMethods.find((m: any) => m.is_active);
         if (activeMethod) {
@@ -125,7 +152,39 @@ export default function LogGrindScreen() {
         }
       }
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error('Failed to load initial data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadGameTiers = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        console.log('No token found');
+        return;
+      }
+
+      // Load game tiers from cache first
+      const cacheKey = `cachedGameTiers_${selectedGame}`;
+      const cachedTiers = await AsyncStorage.getItem(cacheKey);
+      if (cachedTiers) {
+        setGameTiers(JSON.parse(cachedTiers));
+      } else {
+        setLoading(true);
+      }
+
+      // Fetch game tiers in background
+      const tiersRes = await gameApi.fetchRankTiers(selectedGame, token);
+      if (tiersRes.success && tiersRes.data) {
+        const sortedTiers = tiersRes.data.tiers.sort((a, b) => a.tier_order - b.tier_order);
+        setGameTiers(sortedTiers);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(sortedTiers));
+      }
+    } catch (error) {
+      console.error('Failed to load game tiers:', error);
     } finally {
       setLoading(false);
     }

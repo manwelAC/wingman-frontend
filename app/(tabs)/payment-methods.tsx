@@ -6,17 +6,16 @@ import { useTheme } from '@/constants/useTheme';
 import { paymentMethodApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 export default function PaymentMethodsScreen() {
@@ -37,15 +36,27 @@ export default function PaymentMethodsScreen() {
   const [successTitle, setSuccessTitle] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadPaymentMethods();
-    }, [])
-  );
+  // Load payment methods on mount
+  useEffect(() => {
+    loadPaymentMethods();
+  }, []);
 
   const loadPaymentMethods = async () => {
     try {
-      setLoadingPaymentMethods(true);
+      // Load from cache first
+      const cachedAvailableMethods = await AsyncStorage.getItem('cachedAvailableMethods');
+      const cachedUserMethods = await AsyncStorage.getItem('cachedPaymentMethods');
+      
+      if (cachedAvailableMethods) {
+        setAvailableMethods(JSON.parse(cachedAvailableMethods));
+      }
+      
+      if (cachedUserMethods) {
+        setUserPaymentMethods(JSON.parse(cachedUserMethods));
+      } else {
+        setLoadingPaymentMethods(true);
+      }
+
       const token = await AsyncStorage.getItem('authToken');
       if (!token) return;
 
@@ -61,14 +72,17 @@ export default function PaymentMethodsScreen() {
           ...(availableRes.data.data.credit_card || []),
         ];
         setAvailableMethods(allMethods);
+        await AsyncStorage.setItem('cachedAvailableMethods', JSON.stringify(allMethods));
       }
 
       if (userRes.success && userRes.data && userRes.data.data) {
-        setUserPaymentMethods({
+        const userMethods = {
           e_wallet: userRes.data.data.e_wallet || [],
           bank_transfer: userRes.data.data.bank_transfer || [],
           credit_card: userRes.data.data.credit_card || [],
-        });
+        };
+        setUserPaymentMethods(userMethods);
+        await AsyncStorage.setItem('cachedPaymentMethods', JSON.stringify(userMethods));
       }
     } catch (error) {
       console.error('Failed to load payment methods:', error);
@@ -99,7 +113,7 @@ export default function PaymentMethodsScreen() {
       const token = await AsyncStorage.getItem('authToken');
       if (!token) return;
 
-      let response;
+      let response: any = null;
       if (paymentModalMode === 'add') {
         response = await paymentMethodApi.addPaymentMethod(
           {
@@ -120,7 +134,7 @@ export default function PaymentMethodsScreen() {
         );
       }
 
-      if (response.success) {
+      if (response && response.success) {
         setErrorMessage('');
         setSuccessTitle('Success');
         setSuccessMessage(
@@ -196,6 +210,7 @@ export default function PaymentMethodsScreen() {
       fontFamily: 'DMMono',
       fontWeight: 'bold',
       color: theme.colors.textPrimary,
+      paddingVertical: theme.spacing.xl,
     },
     content: {
       paddingHorizontal: theme.spacing.xl,
@@ -327,6 +342,7 @@ export default function PaymentMethodsScreen() {
                       id={method.id}
                       name={methodType?.name || 'Unknown'}
                       icon={methodType?.icon_name || 'wallet-outline'}
+                      logoPath={methodType?.logo_path}
                       accountHolder={method.account_holder_name}
                       accountIdentifier={method.account_identifier}
                       isActive={method.is_active}
@@ -352,6 +368,7 @@ export default function PaymentMethodsScreen() {
                       id={method.id}
                       name={methodType?.name || 'Unknown'}
                       icon={methodType?.icon_name || 'business-outline'}
+                      logoPath={methodType?.logo_path}
                       accountHolder={method.account_holder_name}
                       accountIdentifier={method.account_identifier}
                       isActive={method.is_active}
@@ -377,6 +394,7 @@ export default function PaymentMethodsScreen() {
                       id={method.id}
                       name={methodType?.name || 'Unknown'}
                       icon={methodType?.icon_name || 'card-outline'}
+                      logoPath={methodType?.logo_path}
                       accountHolder={method.account_holder_name}
                       accountIdentifier={method.account_identifier}
                       isActive={method.is_active}

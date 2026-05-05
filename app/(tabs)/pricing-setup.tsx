@@ -6,17 +6,16 @@ import { useTheme } from '@/constants/useTheme';
 import { pricingApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    View,
 } from 'react-native';
 
 const GAMES = ['CODM', 'MLBB', 'Valorant'];
@@ -58,16 +57,21 @@ export default function PricingSetupScreen() {
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
-  // Fetch pricing data when screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchPricing();
-    }, [activeGame])
-  );
+  // Load pricing when game changes
+  useEffect(() => {
+    fetchPricing();
+  }, [activeGame]);
 
   const fetchPricing = async () => {
     try {
-      setLoading(true);
+      const cacheKey = `cachedPricing_${activeGame}`;
+      const cachedPricing = await AsyncStorage.getItem(cacheKey);
+      if (cachedPricing) {
+        setPricingRanges(JSON.parse(cachedPricing));
+      } else {
+        setLoading(true);
+      }
+
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
         console.log('No token found');
@@ -78,6 +82,7 @@ export default function PricingSetupScreen() {
       if (response.success && response.data) {
         const gameData = response.data[activeGame] || [];
         setPricingRanges(gameData);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(gameData));
       }
     } catch (error) {
       console.error('Failed to fetch pricing:', error);

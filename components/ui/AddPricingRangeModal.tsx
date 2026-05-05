@@ -107,7 +107,7 @@ export function AddPricingRangeModal({
     if (!showStartDropdown && ranks.length === 0) {
       // First time opening dropdown - fetch tiers
       const token = await AsyncStorage.getItem('authToken');
-      console.log('🔑 Checking token before fetch:', token ? 'exists' : 'NOT FOUND');
+      console.log('Checking token before fetch:', token ? 'exists' : 'NOT FOUND');
       
       if (!token) {
         alert('⚠️  You must be logged in to set pricing. Please log in first.');
@@ -158,15 +158,13 @@ export function AddPricingRangeModal({
     try {
       setTiersLoading(true);
       const token = await AsyncStorage.getItem('authToken');
-      console.log('🔑 Auth token retrieved:', token ? `${token.substring(0, 20)}...` : 'null');
+      console.log('Auth token retrieved:', token ? `${token.substring(0, 20)}...` : 'null');
       if (!token) {
         alert('Authentication token not found. Please log in again.');
         setTiersLoading(false);
         return;
       }
-      console.log('📡 Fetching rank tiers for', game, 'with token:', token.substring(0, 20) + '...');
       const response = await gameApi.fetchRankTiers(game, token);
-      console.log('✅ Rank tiers response:', response);
       if (response.success && response.data?.tiers) {
         setRanks(response.data.tiers);
       } else {

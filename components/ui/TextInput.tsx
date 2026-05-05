@@ -1,6 +1,7 @@
 import { useTheme } from '@/constants/useTheme';
 import React from 'react';
 import {
+    Pressable,
     TextInput as RNTextInput,
     TextInputProps as RNTextInputProps,
     Text,
@@ -12,6 +13,8 @@ interface TextInputProps extends RNTextInputProps {
   placeholder?: string;
   error?: string;
   disabled?: boolean;
+  rightIcon?: React.ReactNode;
+  onRightIconPress?: () => void;
 }
 
 export function TextInput({
@@ -20,6 +23,8 @@ export function TextInput({
   error,
   disabled,
   style,
+  rightIcon,
+  onRightIconPress,
   ...props
 }: TextInputProps) {
   const theme = useTheme();
@@ -41,26 +46,43 @@ export function TextInput({
           {label}
         </Text>
       )}
-      <RNTextInput
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.textSecondary}
-        editable={!disabled}
-        style={[
-          {
-            height: 52,
-            borderRadius: 12,
-            borderWidth: 1.5,
-            borderColor: error ? theme.colors.statusDanger : theme.colors.border,
-            paddingHorizontal: theme.spacing.md,
-            fontSize: 15,
-            fontFamily: 'DMMono',
-            color: theme.colors.textPrimary,
-            backgroundColor: disabled ? theme.colors.surface : theme.colors.background,
-          },
-          style,
-        ]}
-        {...props}
-      />
+      <View style={{ position: 'relative', flexDirection: 'row', alignItems: 'center' }}>
+        <RNTextInput
+          placeholder={placeholder}
+          placeholderTextColor={theme.colors.textSecondary}
+          editable={!disabled}
+          style={[
+            {
+              flex: 1,
+              height: 52,
+              borderRadius: 12,
+              borderWidth: 1.5,
+              borderColor: error ? theme.colors.statusDanger : theme.colors.border,
+              paddingHorizontal: theme.spacing.md,
+              fontSize: 15,
+              fontFamily: 'DMMono',
+              color: theme.colors.textPrimary,
+              backgroundColor: disabled ? theme.colors.surface : theme.colors.background,
+            },
+            style,
+          ]}
+          {...props}
+        />
+        {rightIcon && (
+          <Pressable
+            onPress={onRightIconPress}
+            style={{
+              position: 'absolute',
+              right: theme.spacing.md,
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingHorizontal: theme.spacing.sm,
+            }}
+          >
+            {rightIcon}
+          </Pressable>
+        )}
+      </View>
       {error && (
         <Text
           style={{

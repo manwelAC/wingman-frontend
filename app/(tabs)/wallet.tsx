@@ -5,16 +5,17 @@ import { useTheme } from '@/constants/useTheme';
 import { paymentMethodApi, walletApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface WalletSummary {
@@ -32,6 +33,7 @@ interface PaymentMethodEarning {
   code: string;
   name: string;
   icon: string;
+  logo_path?: string;
   category: string;
   total_earned: number;
   grind_count: number;
@@ -56,6 +58,7 @@ interface TimelineGrind {
  */
 export default function WalletScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null);
   const [earningsByMethod, setEarningsByMethod] = useState<{
@@ -78,8 +81,21 @@ export default function WalletScreen() {
 
   const loadWalletData = useCallback(async () => {
     try {
-      setIsLoading(true);
       setError(null);
+
+      // Load from cache first
+      const cachedWalletSummary = await AsyncStorage.getItem('cachedWalletSummary');
+      const cachedEarningsByMethod = await AsyncStorage.getItem('cachedEarningsByMethod');
+      const cachedUserMethodIds = await AsyncStorage.getItem('cachedUserMethodIds');
+
+      if (cachedWalletSummary && cachedEarningsByMethod && cachedUserMethodIds) {
+        setWalletSummary(JSON.parse(cachedWalletSummary));
+        const cachedMethods = JSON.parse(cachedUserMethodIds);
+        setUserPaymentMethodIds(cachedMethods);
+        setEarningsByMethod(JSON.parse(cachedEarningsByMethod));
+      } else {
+        setIsLoading(true);
+      }
 
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
@@ -99,6 +115,7 @@ export default function WalletScreen() {
           ...(userData.credit_card || []),
         ].map((m: any) => m.payment_method_type_id);
         setUserPaymentMethodIds(userMethodIds);
+        await AsyncStorage.setItem('cachedUserMethodIds', JSON.stringify(userMethodIds));
       }
 
       // Load wallet summary
@@ -107,6 +124,7 @@ export default function WalletScreen() {
         // Backend wraps response in 'data' field, extract it
         const walletData = (summaryRes.data as any).data || summaryRes.data;
         setWalletSummary(walletData);
+        await AsyncStorage.setItem('cachedWalletSummary', JSON.stringify(walletData));
       } else {
         setError(summaryRes.message || 'Failed to load wallet');
       }
@@ -123,7 +141,7 @@ export default function WalletScreen() {
         };
 
         // Filter to only show payment methods the user has configured
-        setEarningsByMethod({
+        const filteredEarnings = {
           e_wallet: allEarnings.e_wallet.filter((m: PaymentMethodEarning) =>
             userMethodIds.includes(m.type_id)
           ),
@@ -133,7 +151,9 @@ export default function WalletScreen() {
           credit_card: allEarnings.credit_card.filter((m: PaymentMethodEarning) =>
             userMethodIds.includes(m.type_id)
           ),
-        });
+        };
+        setEarningsByMethod(filteredEarnings);
+        await AsyncStorage.setItem('cachedEarningsByMethod', JSON.stringify(filteredEarnings));
       } else {
         setError(earningsRes.message || 'Failed to load earnings');
       }
@@ -218,6 +238,111 @@ export default function WalletScreen() {
     }
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingTop: 12,
+      paddingBottom: 32,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      marginBottom: 12,
+      gap: 12,
+    },
+    title: {
+      fontSize: 32,
+      fontFamily: 'DMMono-Medium',
+      fontWeight: 'bold',
+      paddingVertical: theme.spacing['2xl'],
+      marginBottom: 0,
+    },
+    section: {
+      paddingHorizontal: 0,
+      marginBottom: 28,
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontFamily: 'DMMono-Medium',
+      fontWeight: 'bold',
+      paddingHorizontal: 16,
+      marginBottom: 16,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+    },
+    errorText: {
+      flex: 1,
+      fontSize: 13,
+      fontFamily: 'DMMono-Regular',
+    },
+    infoCard: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+    },
+    infoText: {
+      flex: 1,
+      fontSize: 13,
+      fontFamily: 'DMMono-Regular',
+      lineHeight: 18,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContainer: {
+      flex: 1,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+    },
+    modalTitleContainer: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontFamily: 'DMMono-Medium',
+      fontWeight: 'bold',
+    },
+    modalSubtitle: {
+      fontSize: 12,
+      fontFamily: 'DMMono-Regular',
+      marginTop: 4,
+    },
+    modalContent: {
+      flex: 1,
+      paddingVertical: 16,
+    },
+  });
+
   if (isLoading && !walletSummary) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -237,10 +362,10 @@ export default function WalletScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Wallet</Text>
-          <TouchableOpacity onPress={loadWalletData}>
-            <Ionicons name="refresh" size={24} color={theme.colors.primary} />
+          <TouchableOpacity onPress={() => router.push('/')}>
+            <Ionicons name="chevron-back" size={28} color={theme.colors.primary} />
           </TouchableOpacity>
+          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Wallet</Text>
         </View>
 
         {/* Error Message */}
@@ -388,104 +513,3 @@ export default function WalletScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: 16,
-    paddingBottom: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontFamily: 'DMMono-Medium',
-    fontWeight: 'bold',
-  },
-  section: {
-    paddingHorizontal: 0,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: 'DMMono-Medium',
-    fontWeight: 'bold',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  errorText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: 'DMMono-Regular',
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: 'DMMono-Regular',
-    lineHeight: 18,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  modalTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontFamily: 'DMMono-Medium',
-    fontWeight: 'bold',
-  },
-  modalSubtitle: {
-    fontSize: 12,
-    fontFamily: 'DMMono-Regular',
-    marginTop: 4,
-  },
-  modalContent: {
-    flex: 1,
-    paddingVertical: 16,
-  },
-});

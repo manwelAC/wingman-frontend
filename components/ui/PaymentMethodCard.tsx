@@ -1,12 +1,13 @@
 import { useTheme } from '@/constants/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface PaymentMethodCardProps {
   id: number;
   name: string;
   icon: string;
+  logoPath?: string;
   accountHolder?: string;
   accountIdentifier?: string;
   isActive?: boolean;
@@ -15,10 +16,23 @@ interface PaymentMethodCardProps {
   onToggle?: (id: number, isActive: boolean) => void;
 }
 
+const logoMap: Record<string, any> = {
+  'payment-logo/GCASH.png': require('../../assets/images/payment-logo/GCASH.png'),
+  'payment-logo/MAYA.png': require('../../assets/images/payment-logo/MAYA.png'),
+  'payment-logo/Paypal.png': require('../../assets/images/payment-logo/Paypal.png'),
+  'payment-logo/maribank.png': require('../../assets/images/payment-logo/maribank.png'),
+  'payment-logo/BDO.png': require('../../assets/images/payment-logo/BDO.png'),
+  'payment-logo/BPI.png': require('../../assets/images/payment-logo/BPI.png'),
+  'payment-logo/UnionBank.png': require('../../assets/images/payment-logo/UnionBank.png'),
+  'payment-logo/PNB.png': require('../../assets/images/payment-logo/PNB.png'),
+  'payment-logo/Eastwest.png': require('../../assets/images/payment-logo/Eastwest.png'),
+};
+
 export default function PaymentMethodCard({
   id,
   name,
   icon,
+  logoPath,
   accountHolder,
   accountIdentifier,
   isActive = true,
@@ -113,7 +127,14 @@ export default function PaymentMethodCard({
       <View style={styles.header}>
         <View style={styles.methodInfo}>
           <View style={styles.iconContainer}>
-            <Ionicons name={icon as any} size={20} color={theme.colors.primary} />
+            {logoPath && logoMap[logoPath] ? (
+              <Image
+                source={logoMap[logoPath]}
+                style={{ width: 24, height: 24, borderRadius: 6 }}
+              />
+            ) : (
+              <Ionicons name={icon as any} size={20} color={theme.colors.primary} />
+            )}
           </View>
           <View>
             <Text style={styles.methodName}>{name}</Text>

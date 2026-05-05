@@ -54,13 +54,12 @@ async function apiCall<T>(
       data = JSON.parse(text);
     } catch (parseError) {
       // Response is not JSON (likely HTML error page)
-      console.error('⚠️  Server returned non-JSON response:');
-      console.error('Status:', response.status);
-      console.error('URL:', url);
-      console.error('Token sent:', token ? `${token.substring(0, 20)}...` : 'none');
-      console.error('Request body:', options.body);
-      console.error('Response type:', response.headers.get('content-type'));
-      console.error('First 300 chars:', text.substring(0, 300));
+      console.warn('⚠️  Server returned non-JSON response:', {
+        status: response.status,
+        url: url,
+        contentType: response.headers.get('content-type'),
+        firstChars: text.substring(0, 100),
+      });
       
       return {
         success: false,
@@ -73,7 +72,8 @@ async function apiCall<T>(
     console.log(`✅ Response [${response.status}] ${url}:`, data);
 
     if (!response.ok) {
-      console.error(`❌ Request failed [${response.status}]:`, data);
+      // Log failure for debugging but don't show error to console
+      console.log(`ℹ️  Request failed [${response.status}]:`, data);
       return {
         success: false,
         status: response.status,
@@ -91,11 +91,7 @@ async function apiCall<T>(
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(`API Error [${endpoint}]:`, {
-      url,
-      error: errorMsg,
-      message: 'Failed to connect to backend. Check API_BASE_URL in config/api.ts',
-    });
+    console.warn(`ℹ️  API connection issue [${endpoint}]:`, errorMsg);
     return {
       success: false,
       status: 0,
@@ -721,6 +717,7 @@ export const paymentMethodApi = {
           name: string;
           category: string;
           icon_name: string;
+          logo_path?: string;
           description: string;
           is_active: boolean;
         }>;
@@ -730,6 +727,7 @@ export const paymentMethodApi = {
           name: string;
           category: string;
           icon_name: string;
+          logo_path?: string;
           description: string;
           is_active: boolean;
         }>;
@@ -739,6 +737,7 @@ export const paymentMethodApi = {
           name: string;
           category: string;
           icon_name: string;
+          logo_path?: string;
           description: string;
           is_active: boolean;
         }>;
@@ -764,6 +763,7 @@ export const paymentMethodApi = {
             name: string;
             category: string;
             icon_name: string;
+            logo_path?: string;
           };
         }>;
         bank_transfer: Array<any>;

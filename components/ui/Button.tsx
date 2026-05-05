@@ -14,6 +14,7 @@ interface ButtonProps {
   label: string;
   variant?: ButtonVariant;
   disabled?: boolean;
+  loading?: boolean;
   fullWidth?: boolean;
   style?: ViewStyle;
 }
@@ -31,13 +32,16 @@ export function Button({
   label,
   variant = 'primary',
   disabled = false,
+  loading = false,
   fullWidth = true,
   style,
 }: ButtonProps) {
   const theme = useTheme();
 
+  const isDisabled = disabled || loading;
+
   const getButtonColor = () => {
-    if (disabled) return theme.colors.border;
+    if (isDisabled) return theme.colors.border;
     if (variant === 'primary') return theme.colors.primary;
     if (variant === 'destructive') return theme.colors.statusDanger;
     return 'transparent';
@@ -51,12 +55,12 @@ export function Button({
 
   const buttonColor = getButtonColor();
   const shadowColor = getShadowColor();
-  const showShadow = !disabled && (variant === 'primary' || variant === 'destructive');
+  const showShadow = !isDisabled && (variant === 'primary' || variant === 'destructive');
 
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled}
+      disabled={isDisabled}
       style={({ pressed }) => ({
         width: fullWidth ? '100%' : 'auto',
         ...style,
@@ -95,8 +99,8 @@ export function Button({
               borderRadius: 999,
               borderWidth: variant === 'secondary' ? 2 : 0,
               borderColor: variant === 'secondary' ? theme.colors.primary : undefined,
-              opacity: disabled ? 0.5 : 1,
-              transform: [{ translateY: pressed && !disabled ? 6 : 0 }],
+              opacity: isDisabled ? 0.5 : 1,
+              transform: [{ translateY: pressed && !isDisabled ? 6 : 0 }],
             }}
           >
             <Text
@@ -116,7 +120,7 @@ export function Button({
                     : theme.colors.textSecondary,
               }}
             >
-              {label}
+              {loading ? 'Loading...' : label}
             </Text>
           </View>
         </View>

@@ -3,6 +3,7 @@ import { useTheme } from '@/constants/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
+    Image,
     Modal,
     Pressable,
     ScrollView,
@@ -12,12 +13,25 @@ import {
     View,
 } from 'react-native';
 
+const logoMap: Record<string, any> = {
+  'payment-logo/GCASH.png': require('../../assets/images/payment-logo/GCASH.png'),
+  'payment-logo/MAYA.png': require('../../assets/images/payment-logo/MAYA.png'),
+  'payment-logo/Paypal.png': require('../../assets/images/payment-logo/Paypal.png'),
+  'payment-logo/maribank.png': require('../../assets/images/payment-logo/maribank.png'),
+  'payment-logo/BDO.png': require('../../assets/images/payment-logo/BDO.png'),
+  'payment-logo/BPI.png': require('../../assets/images/payment-logo/BPI.png'),
+  'payment-logo/UnionBank.png': require('../../assets/images/payment-logo/UnionBank.png'),
+  'payment-logo/PNB.png': require('../../assets/images/payment-logo/PNB.png'),
+  'payment-logo/Eastwest.png': require('../../assets/images/payment-logo/Eastwest.png'),
+};
+
 interface PaymentMethod {
   id: number;
   code: string;
   name: string;
   category: string;
   icon_name: string;
+  logo_path?: string;
   description: string;
 }
 
@@ -208,7 +222,14 @@ export default function PaymentMethodModal({
                     onPress={() => setSelected(method)}
                   >
                     <View style={styles.methodIcon}>
-                      <Ionicons name={method.icon_name as any} size={18} color={theme.colors.primary} />
+                      {method.logo_path && logoMap[method.logo_path] ? (
+                        <Image
+                          source={logoMap[method.logo_path]}
+                          style={{ width: 24, height: 24, borderRadius: 6 }}
+                        />
+                      ) : (
+                        <Ionicons name={method.icon_name as any} size={18} color={theme.colors.primary} />
+                      )}
                     </View>
                     <View style={styles.methodText}>
                       <Text style={styles.methodName}>{method?.name || 'Unknown'}</Text>
@@ -233,7 +254,14 @@ export default function PaymentMethodModal({
                     onPress={() => setSelected(method)}
                   >
                     <View style={styles.methodIcon}>
-                      <Ionicons name={method.icon_name as any} size={18} color={theme.colors.primary} />
+                      {method.logo_path && logoMap[method.logo_path] ? (
+                        <Image
+                          source={logoMap[method.logo_path]}
+                          style={{ width: 24, height: 24, borderRadius: 6 }}
+                        />
+                      ) : (
+                        <Ionicons name={method.icon_name as any} size={18} color={theme.colors.primary} />
+                      )}
                     </View>
                     <View style={styles.methodText}>
                       <Text style={styles.methodName}>{method?.name || 'Unknown'}</Text>
@@ -258,7 +286,14 @@ export default function PaymentMethodModal({
                     onPress={() => setSelected(method)}
                   >
                     <View style={styles.methodIcon}>
-                      <Ionicons name={method.icon_name as any} size={18} color={theme.colors.primary} />
+                      {method.logo_path && logoMap[method.logo_path] ? (
+                        <Image
+                          source={logoMap[method.logo_path]}
+                          style={{ width: 24, height: 24, borderRadius: 6 }}
+                        />
+                      ) : (
+                        <Ionicons name={method.icon_name as any} size={18} color={theme.colors.primary} />
+                      )}
                     </View>
                     <View style={styles.methodText}>
                       <Text style={styles.methodName}>{method?.name || 'Unknown'}</Text>

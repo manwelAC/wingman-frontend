@@ -8,8 +8,7 @@ import { useTheme } from '@/constants/useTheme';
 import { customerApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -59,16 +58,20 @@ export default function CustomersScreen() {
     );
   }, [customers, searchQuery]);
 
-  // Fetch customers when screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchCustomers();
-    }, [])
-  );
+  // Load customers on mount
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
 
   const fetchCustomers = async () => {
     try {
-      setLoading(true);
+      const cachedCustomers = await AsyncStorage.getItem('cachedCustomers');
+      if (cachedCustomers) {
+        setCustomers(JSON.parse(cachedCustomers));
+      } else {
+        setLoading(true);
+      }
+
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
         console.log('No token found');
@@ -78,6 +81,7 @@ export default function CustomersScreen() {
       const response = await customerApi.fetchCustomers(token);
       if (response.success && response.data) {
         setCustomers(response.data);
+        await AsyncStorage.setItem('cachedCustomers', JSON.stringify(response.data));
       }
     } catch (error) {
       console.error('Failed to fetch customers:', error);

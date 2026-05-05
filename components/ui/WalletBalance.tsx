@@ -2,12 +2,12 @@ import { useTheme } from '@/constants/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    ActivityIndicator,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 interface WalletBalanceProps {
@@ -68,7 +68,7 @@ export function WalletBalance({
 
   if (isLoading && balance === 0 && totalEarned === 0) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
@@ -83,19 +83,19 @@ export function WalletBalance({
         ) : undefined
       }
     >
-      <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* Main Balance Card */}
-        <View style={[styles.mainCard, { borderColor: theme.colors.primary }]}>
+        <View style={[styles.mainCard, { backgroundColor: theme.colors.primary }]}>
           <View style={styles.balanceHeader}>
-            <Text style={[styles.balanceLabel, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.balanceLabel, { color: '#FFFFFF' }]}>
               Available Balance
             </Text>
-            <Ionicons name="wallet" size={24} color={theme.colors.primary} />
+            <Ionicons name="wallet" size={24} color="#FFFFFF" />
           </View>
-          <Text style={[styles.balanceAmount, { color: theme.colors.textPrimary }]}>
+          <Text style={[styles.balanceAmount, { color: '#FFFFFF' }]}>
             {formatCurrency(balance)}
           </Text>
-          <Text style={[styles.lastTransaction, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.lastTransaction, { color: '#FFFFFF', opacity: 0.8 }]}>
             Last transaction: {formatDate(lastTransactionAt)}
           </Text>
         </View>
@@ -103,7 +103,7 @@ export function WalletBalance({
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           {/* Total Earned */}
-          <View style={[styles.statCard, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.statCard, { backgroundColor: theme.colors.statusSuccess + '15' }]}>
             <View style={styles.statHeader}>
               <Ionicons
                 name="arrow-up-circle-outline"
@@ -120,7 +120,7 @@ export function WalletBalance({
           </View>
 
           {/* Total Withdrawn */}
-          <View style={[styles.statCard, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.statCard, { backgroundColor: theme.colors.statusDanger + '15' }]}>
             <View style={styles.statHeader}>
               <Ionicons
                 name="arrow-down-circle-outline"
@@ -136,31 +136,6 @@ export function WalletBalance({
             </Text>
           </View>
         </View>
-
-        {/* Net Position */}
-        <View
-          style={[
-            styles.netCard,
-            {
-              backgroundColor: theme.colors.background,
-              borderColor: theme.colors.primary,
-            },
-          ]}
-        >
-          <Text style={[styles.netLabel, { color: theme.colors.textSecondary }]}>
-            Net Position
-          </Text>
-          <Text
-            style={[
-              styles.netAmount,
-              {
-                color: (totalEarned || 0) - (totalWithdrawn || 0) >= 0 ? theme.colors.statusSuccess : theme.colors.statusDanger,
-              },
-            ]}
-          >
-            {formatCurrency(Math.max(0, (totalEarned || 0) - (totalWithdrawn || 0)))}
-          </Text>
-        </View>
       </View>
     </ScrollView>
   );
@@ -168,14 +143,20 @@ export function WalletBalance({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    paddingTop: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     gap: 12,
   },
   mainCard: {
-    borderWidth: 2,
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
   },
   balanceHeader: {
     flexDirection: 'row',
@@ -183,13 +164,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'DMMono-Regular',
+    opacity: 0.9,
   },
   balanceAmount: {
-    fontSize: 32,
+    fontSize: 36,
     fontFamily: 'DMMono-Medium',
     fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   lastTransaction: {
     fontSize: 12,
@@ -197,15 +180,13 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 14,
   },
   statCard: {
     flex: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
   },
   statHeader: {
     flexDirection: 'row',
@@ -218,21 +199,6 @@ const styles = StyleSheet.create({
   },
   statAmount: {
     fontSize: 16,
-    fontFamily: 'DMMono-Medium',
-    fontWeight: 'bold',
-  },
-  netCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-  },
-  netLabel: {
-    fontSize: 12,
-    fontFamily: 'DMMono-Regular',
-  },
-  netAmount: {
-    fontSize: 20,
     fontFamily: 'DMMono-Medium',
     fontWeight: 'bold',
   },

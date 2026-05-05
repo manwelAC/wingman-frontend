@@ -6,12 +6,12 @@ import { useTheme } from '@/constants/useTheme';
 import { authApi, paymentMethodApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -34,6 +34,18 @@ interface UserProfile {
   joined_at: string;
   fingerprint_enrolled: boolean;
 }
+
+const logoMap: Record<string, any> = {
+  'payment-logo/GCASH.png': require('../../assets/images/payment-logo/GCASH.png'),
+  'payment-logo/MAYA.png': require('../../assets/images/payment-logo/MAYA.png'),
+  'payment-logo/Paypal.png': require('../../assets/images/payment-logo/Paypal.png'),
+  'payment-logo/maribank.png': require('../../assets/images/payment-logo/maribank.png'),
+  'payment-logo/BDO.png': require('../../assets/images/payment-logo/BDO.png'),
+  'payment-logo/BPI.png': require('../../assets/images/payment-logo/BPI.png'),
+  'payment-logo/UnionBank.png': require('../../assets/images/payment-logo/UnionBank.png'),
+  'payment-logo/PNB.png': require('../../assets/images/payment-logo/PNB.png'),
+  'payment-logo/Eastwest.png': require('../../assets/images/payment-logo/Eastwest.png'),
+};
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -59,39 +71,48 @@ export default function ProfileScreen() {
   });
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadProfile();
-      loadPaymentMethods();
-      checkBiometricAvailability();
-    }, [])
-  );
+  // Load profile and payment methods only on initial mount
+  useEffect(() => {
+    loadProfile();
+    loadPaymentMethods();
+    checkBiometricAvailability();
+  }, []);
 
   const checkBiometricAvailability = async () => {
     try {
       const compatible = await LocalAuthentication.hasHardwareAsync();
       setBiometricAvailable(compatible);
     } catch (error) {
-      console.error('Error checking biometric availability:', error);
+      console.warn('Biometric check unavailable:', error);
       setBiometricAvailable(false);
     }
   };
 
   const loadProfile = async () => {
     try {
-      setLoading(true);
+      // Try to load from cache first
+      const cachedProfile = await AsyncStorage.getItem('cachedProfile');
+      if (cachedProfile) {
+        setProfile(JSON.parse(cachedProfile));
+        // Don't show loading spinner if we have cached data
+      } else {
+        setLoading(true);
+      }
+
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
-        console.log('No token found');
+        console.warn('No token found');
         return;
       }
 
       const response = await authApi.me(token);
       if (response.success && response.data) {
         setProfile(response.data);
+        // Cache the profile data
+        await AsyncStorage.setItem('cachedProfile', JSON.stringify(response.data));
       }
     } catch (error) {
-      console.error('Failed to load profile:', error);
+      console.warn('Failed to load profile:', error);
       setErrorMessage('Failed to load profile');
     } finally {
       setLoading(false);
@@ -138,7 +159,7 @@ export default function ProfileScreen() {
         setErrorMessage(response.message || 'Failed to enroll fingerprint');
       }
     } catch (error) {
-      console.error('Error during fingerprint enrollment:', error);
+      console.warn('Fingerprint enrollment failed:', error);
       setErrorMessage('Failed to enroll fingerprint. Please try again.');
     } finally {
       setEnrolling(false);
@@ -172,7 +193,7 @@ export default function ProfileScreen() {
         setErrorMessage(response.message || 'Failed to disable fingerprint');
       }
     } catch (error) {
-      console.error('Error disabling fingerprint:', error);
+      console.warn('Fingerprint disable failed:', error);
       setErrorMessage('Failed to disable fingerprint. Please try again.');
     } finally {
       setDisabling(false);
@@ -203,17 +224,37 @@ export default function ProfileScreen() {
         setErrorMessage(response.message || 'Failed to logout');
       }
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.warn('Logout failed:', error);
       setErrorMessage('Failed to logout. Please try again.');
     } finally {
       setLoggingOut(false);
     }
   };
 
-  // Payment Methods Handlers
   const loadPaymentMethods = async () => {
     try {
-      setLoadingPaymentMethods(true);
+      // Try to load from cache first
+      const cachedAvailable = await AsyncStorage.getItem('cachedAvailableMethods');
+      const cachedUser = await AsyncStorage.getItem('cachedPaymentMethods');
+
+      if (cachedAvailable && cachedUser) {
+        setAvailableMethods(JSON.parse(cachedAvailable));
+        const userCached = JSON.parse(cachedUser);
+        // Handle both object format (with categories) and array format
+        if (Array.isArray(userCached)) {
+          setUserPaymentMethods({
+            e_wallet: [],
+            bank_transfer: [],
+            credit_card: [],
+          });
+        } else {
+          setUserPaymentMethods(userCached);
+        }
+        // Don't show loading spinner if we have cached data
+      } else {
+        setLoadingPaymentMethods(true);
+      }
+
       const token = await AsyncStorage.getItem('authToken');
       if (!token) return;
 
@@ -229,17 +270,20 @@ export default function ProfileScreen() {
           ...(availableRes.data.data.credit_card || []),
         ];
         setAvailableMethods(allMethods);
+        await AsyncStorage.setItem('cachedAvailableMethods', JSON.stringify(allMethods));
       }
 
       if (userRes.success && userRes.data && userRes.data.data) {
-        setUserPaymentMethods({
+        const userMethods = {
           e_wallet: userRes.data.data.e_wallet || [],
           bank_transfer: userRes.data.data.bank_transfer || [],
           credit_card: userRes.data.data.credit_card || [],
-        });
+        };
+        setUserPaymentMethods(userMethods);
+        await AsyncStorage.setItem('cachedPaymentMethods', JSON.stringify(userMethods));
       }
     } catch (error) {
-      console.error('Failed to load payment methods:', error);
+      console.warn('Payment methods loading failed:', error);
     } finally {
       setLoadingPaymentMethods(false);
     }
@@ -272,8 +316,8 @@ export default function ProfileScreen() {
       fontFamily: 'DMMono',
       fontWeight: 'bold',
       color: theme.colors.textPrimary,
-      paddingVertical: theme.spacing.xl,
-      marginBottom: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      marginBottom: 0,
     },
     content: {
       paddingHorizontal: theme.spacing.xl,
@@ -408,7 +452,7 @@ export default function ProfileScreen() {
     },
   });
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -633,11 +677,18 @@ export default function ProfileScreen() {
                               marginRight: theme.spacing.md,
                             }}
                           >
-                            <Ionicons
-                              name={methodType?.icon_name as any}
-                              size={16}
-                              color={theme.colors.primary}
-                            />
+                            {methodType?.logo_path && logoMap[methodType.logo_path] ? (
+                              <Image
+                                source={logoMap[methodType.logo_path]}
+                                style={{ width: 20, height: 20, borderRadius: 4 }}
+                              />
+                            ) : (
+                              <Ionicons
+                                name={methodType?.icon_name as any}
+                                size={16}
+                                color={theme.colors.primary}
+                              />
+                            )}
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text

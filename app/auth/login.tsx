@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/Button';
+import { ErrorModal } from '@/components/ui/ErrorModal';
 import { SecurityErrorModal } from '@/components/ui/SecurityErrorModal';
+import { SuccessModal } from '@/components/ui/SuccessModal';
 import { TextInput } from '@/components/ui/TextInput';
 import { useTheme } from '@/constants/useTheme';
 import { authApi } from '@/services/api';
@@ -9,14 +11,14 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 interface FormData {
@@ -30,6 +32,12 @@ interface FormErrors {
   general?: string;
 }
 
+interface ErrorModalState {
+  visible: boolean;
+  title: string;
+  message: string;
+}
+
 export default function LoginScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -40,11 +48,17 @@ export default function LoginScreen() {
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
+  const [errorModal, setErrorModal] = useState<ErrorModalState>({
+    visible: false,
+    title: '',
+    message: '',
+  });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [fingerprintLoading, setFingerprintLoading] = useState(false);
   const [vpnModalVisible, setVpnModalVisible] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Check if device supports biometrics on component mount
   useEffect(() => {
@@ -53,7 +67,7 @@ export default function LoginScreen() {
         const compatible = await LocalAuthentication.hasHardwareAsync();
         setBiometricAvailable(compatible);
       } catch (error) {
-        console.error('Error checking biometric availability:', error);
+        console.warn('Biometric check unavailable:', error);
         setBiometricAvailable(false);
       }
     };
@@ -108,6 +122,59 @@ export default function LoginScreen() {
   });
 
   /**
+   * Map backend errors to user-friendly titles and messages
+   */
+  const handleLoginError = (response: any) => {
+    let title = 'Login Failed';
+    let message = 'Please check your credentials and try again.';
+
+    if (response.errors) {
+      // Check for specific field errors
+      if (response.errors.email && response.errors.email[0]) {
+        const errorMsg = response.errors.email[0].toLowerCase();
+        if (errorMsg.includes('does not exist') || errorMsg.includes('not found')) {
+          title = 'Email Not Found';
+          message = 'There is no account associated with this email address.';
+        } else {
+          title = 'Invalid Email';
+          message = response.errors.email[0];
+        }
+      } else if (response.errors.password && response.errors.password[0]) {
+        const errorMsg = response.errors.password[0].toLowerCase();
+        if (errorMsg.includes('invalid') || errorMsg.includes('incorrect')) {
+          title = 'Wrong Password';
+          message = 'The password you entered is incorrect. Please try again.';
+        } else {
+          title = 'Password Error';
+          message = response.errors.password[0];
+        }
+      } else if (response.errors.emailOrUsername) {
+        const errorMsg = response.errors.emailOrUsername[0].toLowerCase();
+        if (errorMsg.includes('not found') || errorMsg.includes('does not exist')) {
+          title = 'User Not Found';
+          message = 'No account found with this username or email.';
+        } else {
+          title = 'Login Failed';
+          message = response.errors.emailOrUsername[0];
+        }
+      }
+    } else if (response.message) {
+      const msg = response.message.toLowerCase();
+      if (msg.includes('not found') || msg.includes('does not exist')) {
+        title = 'User Not Found';
+        message = 'No account found with this username or email.';
+      } else if (msg.includes('invalid') || msg.includes('incorrect')) {
+        title = 'Invalid Credentials';
+        message = 'The email/username or password is incorrect.';
+      } else {
+        message = response.message;
+      }
+    }
+
+    setErrorModal({ visible: true, title, message });
+  };
+
+  /**
    * Validate form fields locally
    */
   const validateForm = (): boolean => {
@@ -131,8 +198,9 @@ export default function LoginScreen() {
    * Handle form submission
    */
   const handleLogin = async () => {
-    // Clear general error
-    setErrors((prev) => ({ ...prev, general: undefined }));
+    // Clear all previous errors
+    setErrors({});
+    setErrorModal({ visible: false, title: '', message: '' });
 
     // Validate first
     if (!validateForm()) {
@@ -148,30 +216,24 @@ export default function LoginScreen() {
       });
 
       if (!response.success) {
-        // Handle validation errors from backend
-        if (response.errors) {
-          const backendErrors: FormErrors = {};
-          Object.entries(response.errors).forEach(([key, messages]) => {
-            backendErrors[key as keyof FormErrors] = messages[0];
-          });
-          setErrors(backendErrors);
-        } else {
-          setErrors({
-            general:
-              response.message || 'Login failed. Please try again.',
-          });
-        }
+        // Show error modal for credential issues
+        handleLoginError(response);
+        // Don't set inline errors when showing modal
+        setErrors({});
+        setLoading(false);
         return;
       }
 
       // VPN Detection - Hard Block
       if (response.data?.vpn_detected) {
+        setLoading(false);
         setVpnModalVisible(true);
         return;
       }
 
       // Anomalous Location Detection - Requires email verification
       if (response.data?.require_location_verification) {
+        setLoading(false);
         router.push({
           pathname: '/auth/verify-email',
           params: {
@@ -185,6 +247,7 @@ export default function LoginScreen() {
 
       // Regular unverified email
       if (response.data?.unverified && !response.data?.require_location_verification) {
+        setLoading(false);
         router.push({
           pathname: '/auth/verify-email',
           params: { email: response.data.email || response.data.user?.email || formData.emailOrUsername.trim() },
@@ -199,16 +262,18 @@ export default function LoginScreen() {
           await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
         }
         
-        // Redirect to dashboard
-        router.push('/(tabs)');
+        // Show success modal - keep loading true until dismissed
+        setShowSuccessModal(true);
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setErrors({
-        general:
-          'An unexpected error occurred. Please check your connection.',
+      console.warn('Login request failed:', error);
+      // Show generic error modal for connection issues
+      setErrorModal({ 
+        visible: true, 
+        title: 'Connection Error',
+        message: 'An unexpected error occurred. Please check your connection and try again.'
       });
-    } finally {
+      setErrors({});
       setLoading(false);
     }
   };
@@ -229,11 +294,11 @@ export default function LoginScreen() {
       // Prompt for fingerprint
       const result = await LocalAuthentication.authenticateAsync({
         disableDeviceFallback: false,
-        reason: 'Authenticate to login to Wingman',
       });
 
       if (!result.success) {
         setErrors({ general: 'Fingerprint authentication failed' });
+        setFingerprintLoading(false);
         return;
       }
 
@@ -243,20 +308,24 @@ export default function LoginScreen() {
       );
 
       if (!response.success) {
-        setErrors({
-          general: response.message || 'Fingerprint login failed. Please try again.',
-        });
+        // Show error modal for credential issues
+        handleLoginError(response);
+        // Don't set inline errors when showing modal
+        setErrors({});
+        setFingerprintLoading(false);
         return;
       }
 
       // VPN Detection - Hard Block
       if (response.data?.vpn_detected) {
+        setFingerprintLoading(false);
         setVpnModalVisible(true);
         return;
       }
 
       // Anomalous Location Detection - Requires email verification
       if (response.data?.require_location_verification) {
+        setFingerprintLoading(false);
         router.push({
           pathname: '/auth/verify-email',
           params: {
@@ -270,6 +339,7 @@ export default function LoginScreen() {
 
       // Check if user is unverified
       if (response.data?.unverified) {
+        setFingerprintLoading(false);
         router.push({
           pathname: '/auth/verify-email',
           params: { email: response.data.user?.email || formData.emailOrUsername.trim() },
@@ -284,17 +354,24 @@ export default function LoginScreen() {
           await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
         }
 
-        // Redirect to dashboard
-        router.push('/(tabs)');
+        // Show success modal - keep fingerprintLoading true until dismissed
+        setShowSuccessModal(true);
       }
     } catch (error) {
-      console.error('Fingerprint login error:', error);
+      console.warn('Fingerprint login request failed:', error);
       setErrors({
         general: 'An error occurred during fingerprint authentication.',
       });
-    } finally {
       setFingerprintLoading(false);
     }
+  };
+
+  /**
+   * Handle success modal dismiss - redirect to dashboard
+   */
+  const handleSuccessModalDismiss = () => {
+    setShowSuccessModal(false);
+    router.push('/(tabs)');
   };
 
   return (
@@ -467,6 +544,14 @@ export default function LoginScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModal.visible}
+        title={errorModal.title}
+        message={errorModal.message}
+        onDismiss={() => setErrorModal({ ...errorModal, visible: false })}
+      />
+
       {/* VPN Detection Error Modal */}
       <SecurityErrorModal
         visible={vpnModalVisible}
@@ -475,6 +560,16 @@ export default function LoginScreen() {
         message="Please disable your VPN to login."
         onDismiss={() => setVpnModalVisible(false)}
         actionLabel="OK"
+      />
+
+      {/* Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Welcome, Grinder!"
+        message="You're logged in. Let's track those grinds!"
+        onDismiss={handleSuccessModalDismiss}
+        autoClose={true}
+        autoCloseDuration={2000}
       />
     </SafeAreaView>
   );

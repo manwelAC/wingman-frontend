@@ -1,13 +1,37 @@
 import { useTheme } from '@/constants/useTheme';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+
+const logoMap: Record<string, any> = {
+  'payment-logo/GCASH.png': require('../../assets/images/payment-logo/GCASH.png'),
+  'payment-logo/MAYA.png': require('../../assets/images/payment-logo/MAYA.png'),
+  'payment-logo/Paypal.png': require('../../assets/images/payment-logo/Paypal.png'),
+  'payment-logo/maribank.png': require('../../assets/images/payment-logo/maribank.png'),
+  'payment-logo/BDO.png': require('../../assets/images/payment-logo/BDO.png'),
+  'payment-logo/BPI.png': require('../../assets/images/payment-logo/BPI.png'),
+  'payment-logo/UnionBank.png': require('../../assets/images/payment-logo/UnionBank.png'),
+  'payment-logo/PNB.png': require('../../assets/images/payment-logo/PNB.png'),
+  'payment-logo/Eastwest.png': require('../../assets/images/payment-logo/Eastwest.png'),
+};
+
+const brandColorMap: Record<string, string> = {
+  gcash: '#0432c5',
+  maya: '#01b463',
+  maribank: '#ea6004',
+  unionbank: '#fc700c',
+  bdo: '#014ea8',
+  bpi: '#a42d31',
+  eastwest: '#d6e24e',
+};
 
 interface PaymentMethodEarning {
   id: number;
@@ -15,6 +39,7 @@ interface PaymentMethodEarning {
   code: string;
   name: string;
   icon: string;
+  logo_path?: string;
   category: string;
   total_earned: number;
   grind_count: number;
@@ -75,46 +100,67 @@ export function EarningsByPaymentMethod({
   };
 
   const renderMethodCard = (method: PaymentMethodEarning) => (
-    <TouchableOpacity
-      key={method.id}
-      onPress={() => onMethodPress?.(method)}
-      style={[
-        styles.methodCard,
-        { backgroundColor: theme.colors.surface },
+    <LinearGradient
+      colors={[
+        brandColorMap[method.code] || theme.colors.primary,
+        brandColorMap[method.code] || theme.colors.primary,
+        '#FFFFFF',
       ]}
-      activeOpacity={0.7}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={styles.gradientContainer}
     >
-      <View style={styles.cardHeader}>
-        <View
-          style={[
-            styles.methodIcon,
-            { backgroundColor: theme.colors.primary + '20' },
-          ]}
-        >
-          <Ionicons name="wallet-outline" size={24} color={theme.colors.primary} />
+      <TouchableOpacity
+        key={method.id}
+        onPress={() => onMethodPress?.(method)}
+        style={[
+          styles.methodCard,
+          { 
+            backgroundColor: 'transparent',
+            borderWidth: 0,
+          },
+        ]}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <View
+            style={[
+              styles.methodIcon,
+              { backgroundColor: '#00000010' },
+            ]}
+          >
+            {method.logo_path && logoMap[method.logo_path] ? (
+              <Image
+                source={logoMap[method.logo_path]}
+                style={{ width: 32, height: 32, borderRadius: 8 }}
+              />
+            ) : (
+              <Ionicons name={method.icon as any} size={24} color="#FFFFFF" />
+            )}
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#000000" />
         </View>
-        <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
-      </View>
 
-      <View style={styles.cardContent}>
-        <Text style={[styles.methodName, { color: theme.colors.textPrimary }]}>
-          {method.name}
-        </Text>
-
-        <Text style={[styles.earnAmount, { color: theme.colors.statusSuccess }]}>
-          {formatCurrency(method.total_earned)}
-        </Text>
-
-        <View style={styles.cardFooter}>
-          <Text style={[styles.methodStats, { color: theme.colors.textSecondary }]}>
-            {method.grind_count} grind{method.grind_count !== 1 ? 's' : ''}
+        <View style={styles.cardContent}>
+          <Text style={[styles.methodName, { color: '#FFFFFF' }]}>
+            {method.name}
           </Text>
-          <Text style={[styles.lastEarned, { color: theme.colors.textSecondary }]}>
-            {formatDate(method.last_earned_at)}
+
+          <Text style={[styles.earnAmount, { color: '#FFFFFF' }]}>
+            {formatCurrency(method.total_earned)}
           </Text>
+
+          <View style={styles.cardFooter}>
+            <Text style={[styles.methodStats, { color: '#FFFFFF' }]}>
+              {method.grind_count} grind{method.grind_count !== 1 ? 's' : ''}
+            </Text>
+            <Text style={[styles.lastEarned, { color: '#000000' }]}>
+              {formatDate(method.last_earned_at)}
+            </Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </LinearGradient>
   );
 
   const renderCategory = (
@@ -195,6 +241,9 @@ const styles = StyleSheet.create({
   },
   cardGrid: {
     gap: 12,
+  },
+  gradientContainer: {
+    borderRadius: 12,
   },
   methodCard: {
     borderRadius: 12,

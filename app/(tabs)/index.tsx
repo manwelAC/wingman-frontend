@@ -3,9 +3,8 @@ import { useTheme } from '@/constants/useTheme';
 import { grindApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -44,27 +43,36 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadGrinds();
-    }, [])
-  );
+  // Load grinds only on initial mount
+  useEffect(() => {
+    loadGrinds();
+  }, []);
 
   const loadGrinds = async () => {
     try {
-      setLoading(true);
+      // Try to load from cache first
+      const cachedGrinds = await AsyncStorage.getItem('cachedGrinds');
+      if (cachedGrinds) {
+        setGrinds(JSON.parse(cachedGrinds));
+        // Don't show loading spinner if we have cached data
+      } else {
+        setLoading(true);
+      }
+
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
-        console.log('No token found');
+        console.warn('No token found');
         return;
       }
 
       const response = await grindApi.fetchGrinds(token);
       if (response.success && response.data) {
         setGrinds(response.data);
+        // Cache the grinds data
+        await AsyncStorage.setItem('cachedGrinds', JSON.stringify(response.data));
       }
     } catch (error) {
-      console.error('Failed to load grinds:', error);
+      console.warn('Failed to load grinds:', error);
     } finally {
       setLoading(false);
     }

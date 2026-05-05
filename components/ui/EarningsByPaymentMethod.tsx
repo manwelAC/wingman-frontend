@@ -101,6 +101,7 @@ export function EarningsByPaymentMethod({
 
   const renderMethodCard = (method: PaymentMethodEarning) => (
     <LinearGradient
+      key={method.id}
       colors={[
         brandColorMap[method.code] || theme.colors.primary,
         brandColorMap[method.code] || theme.colors.primary,
@@ -111,7 +112,6 @@ export function EarningsByPaymentMethod({
       style={styles.gradientContainer}
     >
       <TouchableOpacity
-        key={method.id}
         onPress={() => onMethodPress?.(method)}
         style={[
           styles.methodCard,

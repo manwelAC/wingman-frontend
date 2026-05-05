@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -174,23 +175,40 @@ export default function PaymentMethodsScreen() {
   };
 
   const handleDeletePaymentMethod = async (id: number) => {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) return;
+    Alert.alert(
+      'Delete Payment Method',
+      'Are you sure you want to delete this payment method? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          onPress: () => {},
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('authToken');
+              if (!token) return;
 
-      const response = await paymentMethodApi.deletePaymentMethod(id, token);
-      if (response.success) {
-        setSuccessTitle('Success');
-        setSuccessMessage('Payment method deleted');
-        setSuccessModalVisible(true);
-        await loadPaymentMethods();
-      } else {
-        setErrorMessage(response.message || 'Failed to delete payment method');
-      }
-    } catch (error) {
-      console.error('Error deleting payment method:', error);
-      setErrorMessage('Failed to delete payment method');
-    }
+              const response = await paymentMethodApi.deletePaymentMethod(id, token);
+              if (response.success) {
+                setSuccessTitle('Success');
+                setSuccessMessage('Payment method deleted');
+                setSuccessModalVisible(true);
+                await loadPaymentMethods();
+              } else {
+                setErrorMessage(response.message || 'Failed to delete payment method');
+              }
+            } catch (error) {
+              console.error('Error deleting payment method:', error);
+              setErrorMessage('Failed to delete payment method');
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
   };
 
   const styles = StyleSheet.create({

@@ -15,6 +15,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useColorScheme,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,6 +45,8 @@ const STATUS_OPTIONS = ['all', 'not_started', 'in_progress', 'completed', 'cance
 export default function GrindsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const primaryColor = colorScheme === 'dark' ? '#00D9FF' : theme.colors.primary;
   const [grinds, setGrinds] = useState<Grind[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -218,7 +221,7 @@ export default function GrindsScreen() {
       case 'completed':
         return theme.colors.statusSuccess;
       case 'in_progress':
-        return theme.colors.primary;
+        return primaryColor;
       case 'not_started':
         return theme.colors.textSecondary;
       case 'cancelled':
@@ -328,8 +331,8 @@ export default function GrindsScreen() {
       backgroundColor: theme.colors.surface,
     },
     activeFilterTab: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
+      backgroundColor: primaryColor,
+      borderColor: primaryColor,
     },
     filterTabText: {
       fontSize: 11,
@@ -362,7 +365,7 @@ export default function GrindsScreen() {
       fontSize: 14,
       fontFamily: 'DMMono-Medium',
       fontWeight: 'bold',
-      color: theme.colors.primary,
+      color: primaryColor,
     },
     statusBadge: {
       paddingVertical: 4,
@@ -416,7 +419,7 @@ export default function GrindsScreen() {
     },
     progressFill: {
       height: '100%',
-      backgroundColor: theme.colors.primary,
+      backgroundColor: primaryColor,
     },
     progressText: {
       fontSize: 11,
@@ -519,7 +522,7 @@ export default function GrindsScreen() {
           <Text style={styles.title}>Grinds</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={primaryColor} />
         </View>
         <FloatingNav />
       </SafeAreaView>

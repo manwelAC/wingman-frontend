@@ -17,6 +17,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useColorScheme,
   View,
 } from 'react-native';
 
@@ -49,6 +50,8 @@ const logoMap: Record<string, any> = {
 
 export default function ProfileScreen() {
   const theme = useTheme();
+  const colorScheme = useColorScheme();
+  const primaryColor = colorScheme === 'dark' ? '#00D9FF' : theme.colors.primary;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
@@ -355,10 +358,10 @@ export default function ProfileScreen() {
       fontSize: 12,
       fontFamily: 'DMMono',
       fontWeight: 'bold',
-      color: theme.colors.primary,
+      color: primaryColor,
       paddingVertical: 4,
       paddingHorizontal: 10,
-      backgroundColor: theme.colors.primary + '20',
+      backgroundColor: primaryColor + '20',
       borderRadius: 6,
     },
     profileInfo: {
@@ -459,9 +462,9 @@ export default function ProfileScreen() {
           <Text style={styles.title}>Profile</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={primaryColor} />
         </View>
-        <FloatingNav />
+      <FloatingNav />
       </SafeAreaView>
     );
   }
@@ -612,14 +615,14 @@ export default function ProfileScreen() {
                 <Ionicons
                   name="chevron-forward"
                   size={20}
-                  color={theme.colors.primary}
+                  color={primaryColor}
                 />
               </View>
 
               {loadingPaymentMethods ? (
                 <ActivityIndicator
                   size="small"
-                  color={theme.colors.primary}
+                  color={primaryColor}
                   style={{ paddingVertical: theme.spacing.lg }}
                 />
               ) : (() => {
@@ -671,7 +674,7 @@ export default function ProfileScreen() {
                               width: 32,
                               height: 32,
                               borderRadius: 6,
-                              backgroundColor: theme.colors.primary + '20',
+                              backgroundColor: primaryColor + '20',
                               justifyContent: 'center',
                               alignItems: 'center',
                               marginRight: theme.spacing.md,
@@ -686,7 +689,7 @@ export default function ProfileScreen() {
                               <Ionicons
                                 name={methodType?.icon_name as any}
                                 size={16}
-                                color={theme.colors.primary}
+                                color={primaryColor}
                               />
                             )}
                           </View>
@@ -736,7 +739,7 @@ export default function ProfileScreen() {
                         style={{
                           fontSize: 11,
                           fontFamily: 'DMMono',
-                          color: theme.colors.primary,
+                          color: primaryColor,
                           marginTop: theme.spacing.md,
                           fontWeight: 'bold',
                         }}
@@ -767,7 +770,7 @@ export default function ProfileScreen() {
                         ? theme.colors.textSecondary
                         : profile.fingerprint_enrolled
                         ? theme.colors.statusSuccess
-                        : theme.colors.primary
+                        : primaryColor
                     }
                   />
                 </View>
@@ -851,7 +854,9 @@ export default function ProfileScreen() {
         visible={successModalVisible}
         title={successTitle}
         message={successMessage}
-        onDismiss={() => setSuccessModalVisible(false)}
+        onDismiss={() => {
+          setSuccessModalVisible(false);
+        }}
       />
 
       <DeleteConfirmationModal

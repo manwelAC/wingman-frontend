@@ -2,12 +2,12 @@ import { useTheme } from '@/constants/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface GrindTransaction {
@@ -86,7 +86,10 @@ export function EarningsTimeline({
 
   const getTierLabel = (grind: GrindTransaction): string => {
     if (grind.service_type === 'rank_boost') {
-      return `${grind.starting_tier} → ${grind.target_tier}`;
+      if (grind.starting_tier && grind.target_tier) {
+        return `${grind.starting_tier} → ${grind.target_tier}`;
+      }
+      return 'Rank Boost';
     } else if (grind.service_type === 'win_count') {
       return `${grind.target_stars} wins`;
     }
@@ -99,7 +102,7 @@ export function EarningsTimeline({
       activeOpacity={0.7}
       style={[
         styles.grindItem,
-        { backgroundColor: theme.colors.cardBackground },
+        { backgroundColor: theme.colors.surface },
       ]}
     >
       <View style={styles.grindHeader}>
@@ -111,7 +114,7 @@ export function EarningsTimeline({
             ]}
           >
             <Ionicons
-              name={GAME_ICONS[item.game] || 'gaming-outline'}
+              name={(GAME_ICONS[item.game] || 'gaming-outline') as any}
               size={18}
               color={theme.colors.primary}
             />
@@ -181,7 +184,7 @@ export function EarningsTimeline({
   };
 
   const renderEmpty = () => (
-    <View style={[styles.emptyState, { backgroundColor: theme.colors.cardBackground }]}>
+    <View style={[styles.emptyState, { backgroundColor: theme.colors.surface }]}>
       <Ionicons name="calendar-clear-outline" size={48} color={theme.colors.textSecondary} />
       <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
         No earnings yet

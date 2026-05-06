@@ -3,14 +3,14 @@ import { useTheme } from '@/constants/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-    Image,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 
 const logoMap: Record<string, any> = {
@@ -101,16 +101,14 @@ export default function PaymentMethodModal({
       maxHeight: '80%',
     },
     title: {
-      fontSize: 18,
+      fontSize: 19,
       fontFamily: 'DMMono',
       fontWeight: 'bold',
       color: theme.colors.textPrimary,
-      marginBottom: theme.spacing.md,
+      marginBottom: theme.spacing.xs,
     },
     closeButton: {
-      position: 'absolute',
-      right: theme.spacing.lg,
-      top: theme.spacing.lg,
+      padding: theme.spacing.sm,
     },
     categoryTitle: {
       fontSize: 13,
@@ -159,8 +157,8 @@ export default function PaymentMethodModal({
       color: theme.colors.textSecondary,
     },
     detailsSection: {
-      marginTop: theme.spacing.lg,
-      paddingTop: theme.spacing.lg,
+      marginTop: theme.spacing.xs,
+      paddingTop: theme.spacing.xs,
       borderTopWidth: 1,
       borderTopColor: theme.colors.border,
     },
@@ -184,8 +182,8 @@ export default function PaymentMethodModal({
     },
     buttonContainer: {
       flexDirection: 'row',
-      gap: theme.spacing.md,
-      marginTop: theme.spacing.lg,
+      gap: theme.spacing.xs,
+      marginTop: 0,
     },
     button: {
       flex: 1,
@@ -366,6 +364,7 @@ export default function PaymentMethodModal({
                       fullWidth
                       onPress={onCancel}
                       disabled={loading}
+                      noShadow
                     />
                   </View>
                   <View style={styles.button}>
@@ -375,6 +374,7 @@ export default function PaymentMethodModal({
                       fullWidth
                       onPress={handleSave}
                       disabled={loading}
+                      noShadow
                     />
                   </View>
                 </View>

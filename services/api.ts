@@ -36,11 +36,10 @@ async function apiCall<T>(
   }
 
   try {
-    console.log(`📡 [${options.method || 'GET'}] ${url}`, {
-      method: options.method || 'GET',
-      headers: { ...headers, Authorization: token ? `Bearer ${token.substring(0, 20)}...` : 'none' },
-      body: options.body,
-    });
+    // Log request in debug mode only (never log body - contains sensitive data like passwords)
+    if (API_CONFIG.DEBUG) {
+      console.log(`📡 [${options.method || 'GET'}] ${url}`);
+    }
 
     const response = await fetch(url, {
       ...options,
@@ -69,11 +68,15 @@ async function apiCall<T>(
       };
     }
 
-    console.log(`✅ Response [${response.status}] ${url}:`, data);
+    if (API_CONFIG.DEBUG) {
+      console.log(`✅ Response [${response.status}] ${url}`);
+    }
 
     if (!response.ok) {
-      // Log failure for debugging but don't show error to console
-      console.log(`ℹ️  Request failed [${response.status}]:`, data);
+      // Log failure for debugging (never log data - contains sensitive info)
+      if (API_CONFIG.DEBUG) {
+        console.log(`ℹ️  Request failed [${response.status}]`);
+      }
       return {
         success: false,
         status: response.status,

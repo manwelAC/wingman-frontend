@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/Button';
+import FloatingNav from '@/components/ui/FloatingNav';
 import PaymentMethodCard from '@/components/ui/PaymentMethodCard';
 import PaymentMethodModal from '@/components/ui/PaymentMethodModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
@@ -9,18 +10,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    useColorScheme,
+    View,
 } from 'react-native';
 
 export default function PaymentMethodsScreen() {
   const theme = useTheme();
+  const colorScheme = useColorScheme();
+  const primaryColor = colorScheme === 'dark' ? '#00D9FF' : theme.colors.primary;
   const [availableMethods, setAvailableMethods] = useState<any[]>([]);
   const [userPaymentMethods, setUserPaymentMethods] = useState<any>({
     e_wallet: [],
@@ -53,7 +57,13 @@ export default function PaymentMethodsScreen() {
       }
       
       if (cachedUserMethods) {
-        setUserPaymentMethods(JSON.parse(cachedUserMethods));
+        const parsed = JSON.parse(cachedUserMethods);
+        // Ensure structure is valid
+        setUserPaymentMethods({
+          e_wallet: parsed?.e_wallet || [],
+          bank_transfer: parsed?.bank_transfer || [],
+          credit_card: parsed?.credit_card || [],
+        });
       } else {
         setLoadingPaymentMethods(true);
       }
@@ -87,6 +97,12 @@ export default function PaymentMethodsScreen() {
       }
     } catch (error) {
       console.error('Failed to load payment methods:', error);
+      // Ensure valid state on error
+      setUserPaymentMethods({
+        e_wallet: [],
+        bank_transfer: [],
+        credit_card: [],
+      });
     } finally {
       setLoadingPaymentMethods(false);
     }
@@ -270,7 +286,7 @@ export default function PaymentMethodsScreen() {
           style={{
             paddingVertical: 6,
             paddingHorizontal: 10,
-            backgroundColor: theme.colors.primary + '20',
+            backgroundColor: primaryColor + '20',
             borderRadius: 6,
           }}
         >
@@ -279,7 +295,7 @@ export default function PaymentMethodsScreen() {
               fontSize: 11,
               fontFamily: 'DMMono',
               fontWeight: 'bold',
-              color: theme.colors.primary,
+              color: primaryColor,
             }}
           >
             + Add
@@ -332,7 +348,7 @@ export default function PaymentMethodsScreen() {
 
         {loadingPaymentMethods ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color={primaryColor} />
           </View>
         ) : Object.values(userPaymentMethods).every((arr: any) => arr.length === 0) ? (
           <View style={styles.loadingContainer}>
@@ -454,6 +470,8 @@ export default function PaymentMethodsScreen() {
         message={successMessage}
         onDismiss={() => setSuccessModalVisible(false)}
       />
+
+      <FloatingNav />
     </SafeAreaView>
   );
 }

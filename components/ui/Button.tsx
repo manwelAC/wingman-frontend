@@ -17,6 +17,7 @@ interface ButtonProps {
   loading?: boolean;
   fullWidth?: boolean;
   style?: ViewStyle;
+  noShadow?: boolean;
 }
 
 /**
@@ -35,6 +36,7 @@ export function Button({
   loading = false,
   fullWidth = true,
   style,
+  noShadow = false,
 }: ButtonProps) {
   const theme = useTheme();
 
@@ -55,7 +57,7 @@ export function Button({
 
   const buttonColor = getButtonColor();
   const shadowColor = getShadowColor();
-  const showShadow = !isDisabled && (variant === 'primary' || variant === 'destructive');
+  const showShadow = !isDisabled && !noShadow && (variant === 'primary' || variant === 'destructive');
 
   return (
     <Pressable

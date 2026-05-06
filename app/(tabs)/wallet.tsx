@@ -1,5 +1,6 @@
 import { EarningsByPaymentMethod } from '@/components/ui/EarningsByPaymentMethod';
 import { EarningsTimeline } from '@/components/ui/EarningsTimeline';
+import FloatingNav from '@/components/ui/FloatingNav';
 import { WalletBalance } from '@/components/ui/WalletBalance';
 import { useTheme } from '@/constants/useTheme';
 import { paymentMethodApi, walletApi } from '@/services/api';
@@ -15,6 +16,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from 'react-native';
 
@@ -59,6 +61,8 @@ interface TimelineGrind {
 export default function WalletScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const primaryColor = colorScheme === 'dark' ? '#00D9FF' : theme.colors.primary;
   const [isLoading, setIsLoading] = useState(true);
   const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null);
   const [earningsByMethod, setEarningsByMethod] = useState<{
@@ -347,7 +351,7 @@ export default function WalletScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={primaryColor} />
         </View>
       </SafeAreaView>
     );
@@ -363,7 +367,7 @@ export default function WalletScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.push('/')}>
-            <Ionicons name="chevron-back" size={28} color={theme.colors.primary} />
+            <Ionicons name="chevron-back" size={28} color={primaryColor} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Wallet</Text>
         </View>
@@ -420,13 +424,13 @@ export default function WalletScreen() {
         <View
           style={[
             styles.infoCard,
-            { backgroundColor: theme.colors.primary + '10' },
+            { backgroundColor: primaryColor + '10' },
           ]}
         >
           <Ionicons
             name="information-circle"
             size={20}
-            color={theme.colors.primary}
+            color={primaryColor}
           />
           <Text
             style={[
@@ -459,7 +463,7 @@ export default function WalletScreen() {
             ]}
           >
             <TouchableOpacity onPress={() => setShowTimelineModal(false)}>
-              <Ionicons name="chevron-back" size={28} color={theme.colors.primary} />
+              <Ionicons name="chevron-back" size={28} color={primaryColor} />
             </TouchableOpacity>
             <View style={styles.modalTitleContainer}>
               <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>
@@ -510,6 +514,8 @@ export default function WalletScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      <FloatingNav />
     </SafeAreaView>
   );
 }

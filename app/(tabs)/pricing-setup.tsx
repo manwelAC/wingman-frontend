@@ -8,14 +8,15 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  useColorScheme,
+  View,
 } from 'react-native';
 
 const GAMES = ['CODM', 'MLBB', 'Valorant'];
@@ -46,6 +47,8 @@ interface PricingRange {
 
 export default function PricingSetupScreen() {
   const theme = useTheme();
+  const colorScheme = useColorScheme();
+  const primaryColor = colorScheme === 'dark' ? '#00D9FF' : theme.colors.primary;
   const [activeGame, setActiveGame] = useState('CODM');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -228,7 +231,7 @@ export default function PricingSetupScreen() {
       borderBottomColor: 'transparent',
     },
     activeGameTab: {
-      borderBottomColor: theme.colors.primary,
+      borderBottomColor: primaryColor,
     },
     gameTabText: {
       fontSize: 14,
@@ -237,7 +240,7 @@ export default function PricingSetupScreen() {
       color: theme.colors.textSecondary,
     },
     activeGameTabText: {
-      color: theme.colors.primary,
+      color: primaryColor,
     },
     rangeCard: {
       backgroundColor: theme.colors.surface,
@@ -337,7 +340,7 @@ export default function PricingSetupScreen() {
         {/* Loading State */}
         {loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color={primaryColor} />
           </View>
         )}
 
@@ -353,8 +356,8 @@ export default function PricingSetupScreen() {
                       value={range.is_active}
                       onValueChange={() => togglePricingStatus(range.id, range.is_active)}
                       disabled={togglingId === range.id}
-                      trackColor={{ false: '#767577', true: theme.colors.primary }}
-                      thumbColor={range.is_active ? theme.colors.primary : '#f4f3f4'}
+                      trackColor={{ false: '#767577', true: primaryColor }}
+                      thumbColor={range.is_active ? primaryColor : '#f4f3f4'}
                     />
                     <Pressable 
                       style={styles.editButton}

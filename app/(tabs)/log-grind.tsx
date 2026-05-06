@@ -7,15 +7,16 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    useColorScheme,
+    View,
 } from 'react-native';
 
 const GAMES = ['CODM', 'MLBB', 'Valorant'];
@@ -41,6 +42,8 @@ interface GameRankTier {
 
 export default function LogGrindScreen() {
   const theme = useTheme();
+  const colorScheme = useColorScheme();
+  const primaryColor = colorScheme === 'dark' ? '#00D9FF' : theme.colors.primary;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [gameTiers, setGameTiers] = useState<GameRankTier[]>([]);
   const [loading, setLoading] = useState(false);
@@ -355,8 +358,8 @@ export default function LogGrindScreen() {
       alignItems: 'center',
     },
     activeGameTab: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
+      backgroundColor: primaryColor,
+      borderColor: primaryColor,
     },
     gameTabText: {
       fontSize: 12,
@@ -383,8 +386,8 @@ export default function LogGrindScreen() {
       alignItems: 'center',
     },
     activeTierButton: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
+      backgroundColor: primaryColor,
+      borderColor: primaryColor,
     },
     tierButtonText: {
       fontSize: 12,
@@ -398,7 +401,7 @@ export default function LogGrindScreen() {
       backgroundColor: theme.colors.surface,
       borderRadius: 12,
       borderWidth: 1.5,
-      borderColor: theme.colors.primary,
+      borderColor: primaryColor,
       padding: theme.spacing.md,
       marginBottom: theme.spacing.lg,
     },
@@ -416,7 +419,7 @@ export default function LogGrindScreen() {
       fontSize: 14,
       fontFamily: 'DMMono',
       fontWeight: 'bold',
-      color: theme.colors.primary,
+      color: primaryColor,
     },
     buttonContainer: {
       marginTop: theme.spacing.lg,
@@ -456,7 +459,7 @@ export default function LogGrindScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={primaryColor} />
           <Text style={{ marginTop: theme.spacing.lg, fontSize: 16, fontFamily: 'DMMono', fontWeight: 'bold', color: theme.colors.textPrimary }}>
             Switching to {selectedGame}
           </Text>
@@ -621,7 +624,7 @@ export default function LogGrindScreen() {
               <Text style={[styles.priceLabel, { fontWeight: 'bold' }]}>Total Price:</Text>
               {calculatingPrice ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginRight: 8 }} />
+                  <ActivityIndicator size="small" color={primaryColor} style={{ marginRight: 8 }} />
                   <Text style={[styles.priceValue, { fontSize: 16 }]}>Calculating...</Text>
                 </View>
               ) : (

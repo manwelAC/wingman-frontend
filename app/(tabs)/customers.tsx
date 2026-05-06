@@ -15,8 +15,7 @@ import {
   Pressable,
   SafeAreaView,
   StyleSheet,
-  Text,
-  View,
+  Text, useColorScheme, View
 } from 'react-native';
 
 interface Customer {
@@ -32,6 +31,8 @@ interface Customer {
 
 export default function CustomersScreen() {
   const theme = useTheme();
+  const colorScheme = useColorScheme();
+  const primaryColor = colorScheme === 'dark' ? '#00D9FF' : theme.colors.primary;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -277,7 +278,7 @@ export default function CustomersScreen() {
             style={styles.addButton}
             onPress={() => setShowAddModal(true)}
           >
-            <Ionicons name="add-circle" size={28} color={theme.colors.primary} />
+            <Ionicons name="add-circle" size={28} color={primaryColor} />
           </Pressable>
         </View>
         <TextInput
@@ -291,7 +292,7 @@ export default function CustomersScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={primaryColor} />
         </View>
       ) : filteredCustomers.length === 0 ? (
         <View style={styles.emptyContainer}>

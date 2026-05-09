@@ -3,16 +3,16 @@ import { customerApi } from '@/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
 import { SuccessModal } from './SuccessModal';
 

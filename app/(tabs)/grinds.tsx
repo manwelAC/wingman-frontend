@@ -6,17 +6,17 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useColorScheme,
-  View,
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    useColorScheme,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,6 +30,7 @@ interface Grind {
   progress_percentage: number;
   base_price: string;
   final_price: string;
+  due_date: string | null;
   started_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;

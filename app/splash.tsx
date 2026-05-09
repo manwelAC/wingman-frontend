@@ -2,9 +2,9 @@ import { Logo } from '@/components/Logo';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
-    Animated,
-    View,
-    useWindowDimensions,
+  Animated,
+  View,
+  useWindowDimensions
 } from 'react-native';
 
 export default function SplashScreen() {
@@ -17,113 +17,55 @@ export default function SplashScreen() {
   const scale = useRef(new Animated.Value(1.2)).current;
   const opacity = useRef(new Animated.Value(1)).current;
 
+  // Cloud animation refs
+  const cloudAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+
+  // Cloud data: position, scale, animation index
+  const clouds = [
+    // Left side (4 clouds)
+    { top: 40, left: 1, scale: 0.7, animIndex: 0 },
+    { top: 170, left: 22, scale: 0.9, animIndex: 1 },
+    { top: 300, left: 1, scale: 0.6, animIndex: 2 },
+    { top: 450, left: 15, scale: 0.8, animIndex: 3 },
+    // Right side (3 clouds)
+    { top: 95, right: 1, scale: 1.75, animIndex: 4 },
+    { top: 360, right: 1, scale: 0.85, animIndex: 5 },
+    { top: 550, right: 1, scale: 0.7, animIndex: 6 },
+  ];
+
   useEffect(() => {
-    // Dynamic side-to-side with vertical movement and flip
-    const animationSequence = Animated.sequence([
-      // First pass: left to right (top position, normal orientation)
-      Animated.parallel([
-        Animated.timing(translateX, {
-          toValue: width + 150,
-          duration: 600,
-          useNativeDriver: false,
-        }),
-        Animated.timing(translateY, {
-          toValue: -150,
-          duration: 600,
-          useNativeDriver: false,
-        }),
-        Animated.timing(scaleX, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: false,
-        }),
-      ]),
-      
-      // Second pass: right to left (bottom position, flipped)
-      Animated.parallel([
-        Animated.timing(translateX, {
-          toValue: -width - 150,
-          duration: 500,
-          useNativeDriver: false,
-        }),
-        Animated.timing(translateY, {
-          toValue: 150,
-          duration: 500,
-          useNativeDriver: false,
-        }),
-        Animated.timing(scaleX, {
-          toValue: -1,
-          duration: 500,
-          useNativeDriver: false,
-        }),
-      ]),
-      
-      // Third pass: left to right (middle-top, normal)
-      Animated.parallel([
-        Animated.timing(translateX, {
-          toValue: width + 100,
-          duration: 550,
-          useNativeDriver: false,
-        }),
-        Animated.timing(translateY, {
-          toValue: -100,
-          duration: 550,
-          useNativeDriver: false,
-        }),
-        Animated.timing(scaleX, {
-          toValue: 1,
-          duration: 550,
-          useNativeDriver: false,
-        }),
-      ]),
-      
-      // Fourth pass: right to left (middle-bottom, flipped)
-      Animated.parallel([
-        Animated.timing(translateX, {
-          toValue: -width - 100,
-          duration: 480,
-          useNativeDriver: false,
-        }),
-        Animated.timing(translateY, {
-          toValue: 120,
-          duration: 480,
-          useNativeDriver: false,
-        }),
-        Animated.timing(scaleX, {
-          toValue: -1,
-          duration: 480,
-          useNativeDriver: false,
-        }),
-      ]),
-      
-      // Final settle to center
-      Animated.parallel([
-        Animated.timing(translateX, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: false,
-        }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: false,
-        }),
-        Animated.timing(scaleX, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: false,
-        }),
-        Animated.timing(scale, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: false,
-        }),
-      ]),
-      
-      // Hold in center
-      Animated.delay(1200),
-      
-      // Fade out
+    // Animate clouds with gentle floating motion
+    const cloudAnimationSequences = cloudAnimations.map((anim) => 
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: 20,
+            duration: 3000,
+            useNativeDriver: false,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 3000,
+            useNativeDriver: false,
+          }),
+        ])
+      )
+    );
+
+    // Start all cloud animations
+    cloudAnimationSequences.forEach((seq) => seq.start());
+
+    // Fade out after 6 seconds
+    const fadeOutSequence = Animated.sequence([
+      Animated.delay(6000),
       Animated.timing(opacity, {
         toValue: 0,
         duration: 400,
@@ -131,10 +73,10 @@ export default function SplashScreen() {
       }),
     ]);
 
-    animationSequence.start(() => {
+    fadeOutSequence.start(() => {
       router.replace('/onboarding');
     });
-  }, [width, router]);
+  }, [width, router, opacity]);
 
   return (
     <View
@@ -146,6 +88,29 @@ export default function SplashScreen() {
         overflow: 'hidden',
       }}
     >
+      {/* Clouds background layer */}
+      {clouds.map((cloud, idx) => (
+        <Animated.Image
+          key={idx}
+          source={require('@/assets/images/play-screen-icons/clouds.png')}
+          style={{
+            position: 'absolute',
+            top: cloud.top,
+            left: cloud.left,
+            right: cloud.right,
+            width: 250,
+            height: 250,
+            transform: [
+              { scale: cloud.scale },
+              { translateY: cloudAnimations[cloud.animIndex] },
+            ],
+            opacity: 0.8,
+          }}
+          resizeMode="contain"
+        />
+      ))}
+
+      {/* Logo animation layer */}
       <Animated.View
         style={{
           transform: [

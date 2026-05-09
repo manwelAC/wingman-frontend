@@ -7,15 +7,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  useColorScheme,
+    ActivityIndicator,
+    Pressable,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+    useColorScheme,
 } from 'react-native';
 
 interface Grind {
@@ -28,6 +28,7 @@ interface Grind {
   progress_percentage: number;
   base_price: string;
   final_price: string;
+  due_date: string | null;
   started_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;

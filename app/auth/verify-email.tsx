@@ -6,12 +6,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function VerifyEmailScreen() {
   const theme = useTheme();

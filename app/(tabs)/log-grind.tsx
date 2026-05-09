@@ -18,6 +18,7 @@ import {
     useColorScheme,
     View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const GAMES = ['CODM', 'MLBB', 'Valorant'];
 const SERVICE_TYPES = ['rank-boost', 'star-grind'];
@@ -62,6 +63,7 @@ export default function LogGrindScreen() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>(null);
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [availableMethods, setAvailableMethods] = useState<any[]>([]);
+  const [dueDate, setDueDate] = useState<Date | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successGrindNumber, setSuccessGrindNumber] = useState('');
   const [successCustomerName, setSuccessCustomerName] = useState('');
@@ -71,6 +73,8 @@ export default function LogGrindScreen() {
   const [showStartTierModal, setShowStartTierModal] = useState(false);
   const [showTargetTierModal, setShowTargetTierModal] = useState(false);
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // Load data on mount and when game changes
   useEffect(() => {
@@ -226,6 +230,37 @@ export default function LogGrindScreen() {
     setTotalPrice(0);
   };
 
+  const handleDateChange = (event: any, selectedDate: Date | undefined) => {
+    if (selectedDate) {
+      const newDate = new Date(dueDate || new Date());
+      newDate.setFullYear(selectedDate.getFullYear());
+      newDate.setMonth(selectedDate.getMonth());
+      newDate.setDate(selectedDate.getDate());
+      setDueDate(newDate);
+    }
+    setShowDatePicker(false);
+  };
+
+  const handleTimeChange = (event: any, selectedTime: Date | undefined) => {
+    if (selectedTime) {
+      const newDate = new Date(dueDate || new Date());
+      newDate.setHours(selectedTime.getHours());
+      newDate.setMinutes(selectedTime.getMinutes());
+      setDueDate(newDate);
+    }
+    setShowTimePicker(false);
+  };
+
+  const formatDueDate = (date: Date | null) => {
+    if (!date) return null;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  };
+
   const handleSubmit = async () => {
     if (!selectedCustomer || !startingTier || !targetTier || totalPrice === 0 || !selectedPaymentMethod) {
       alert('Please fill in all required fields and wait for price calculation');
@@ -252,6 +287,7 @@ export default function LogGrindScreen() {
           account_username: accountUsername,
           special_instructions: specialInstructions,
           payment_method_type_id: selectedPaymentMethod.payment_method_type_id || selectedPaymentMethod.id,
+          due_date: dueDate ? formatDueDate(dueDate) : null,
         },
         token
       );
@@ -272,6 +308,7 @@ export default function LogGrindScreen() {
           setAccountUsername('');
           setSpecialInstructions('');
           setTotalPrice(0);
+          setDueDate(null);
         }, 100);
       } else {
         alert(response.message || 'Failed to create grind');
@@ -611,6 +648,49 @@ export default function LogGrindScreen() {
           />
         </View>
 
+        {/* Due Date */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Due Date (Optional)</Text>
+          <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+            <Pressable
+              style={[styles.selector, { flex: 1 }]}
+              onPress={() => {
+                if (!dueDate) setDueDate(new Date());
+                setShowDatePicker(true);
+              }}
+            >
+              <Text style={[styles.selectorText, !dueDate && styles.selectorPlaceholder]}>
+                {dueDate ? dueDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Select date'}
+              </Text>
+              <Ionicons name="calendar" size={20} color={theme.colors.textSecondary} />
+            </Pressable>
+
+            <Pressable
+              style={[styles.selector, { flex: 1 }]}
+              onPress={() => {
+                if (!dueDate) setDueDate(new Date());
+                setShowTimePicker(true);
+              }}
+              disabled={!dueDate}
+            >
+              <Text style={[styles.selectorText, !dueDate && styles.selectorPlaceholder, { opacity: dueDate ? 1 : 0.5 }]}>
+                {dueDate ? dueDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Select time'}
+              </Text>
+              <Ionicons name="time" size={20} color={theme.colors.textSecondary} style={{ opacity: dueDate ? 1 : 0.5 }} />
+            </Pressable>
+          </View>
+          {dueDate && (
+            <Pressable
+              onPress={() => setDueDate(null)}
+              style={{ marginTop: theme.spacing.sm }}
+            >
+              <Text style={{ fontSize: 12, fontFamily: 'DMMono', color: theme.colors.textSecondary }}>
+                Clear: {formatDueDate(dueDate)}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
         {/* Price Summary */}
         {startingTier && targetTier && (
           <View style={[styles.priceSummary, calculatingPrice && { opacity: 0.7 }]}>
@@ -783,6 +863,28 @@ export default function LogGrindScreen() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={dueDate || new Date()}
+          mode="date"
+          display="spinner"
+          onChange={handleDateChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      {/* Time Picker */}
+      {showTimePicker && (
+        <DateTimePicker
+          value={dueDate || new Date()}
+          mode="time"
+          display="spinner"
+          onChange={handleTimeChange}
+          is24Hour={false}
+        />
+      )}
 
       <SuccessModal
         visible={showSuccessModal}

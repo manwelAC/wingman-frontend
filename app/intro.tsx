@@ -6,11 +6,11 @@ import React, { useRef, useState } from 'react';
 import {
     FlatList,
     Pressable,
-    SafeAreaView,
     Text,
     View,
     useWindowDimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Slide {
   id: string;

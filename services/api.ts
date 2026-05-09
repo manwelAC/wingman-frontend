@@ -612,6 +612,7 @@ export const grindApi = {
     account_username?: string;
     special_instructions?: string;
     payment_method_type_id: number;
+    due_date?: string | null;
   }, token: string) =>
     apiCall<{
       id: number;
@@ -630,6 +631,7 @@ export const grindApi = {
       current_tier: string;
       account_username: string;
       special_instructions: string;
+      due_date: string | null;
       started_at: string | null;
       completed_at: string | null;
       cancelled_at: string | null;
@@ -654,6 +656,7 @@ export const grindApi = {
       progress_percentage: number;
       base_price: string;
       final_price: string;
+      due_date: string | null;
       started_at: string | null;
       completed_at: string | null;
       cancelled_at: string | null;

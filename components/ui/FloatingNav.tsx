@@ -9,7 +9,7 @@ import AIChat from './AIChat';
 interface NavItem {
   label: string;
   icon: string;
-  href?: "/(tabs)" | "/(tabs)/grinds" | "/(tabs)/log-grind" | "/(tabs)/customers" | "/(tabs)/pricing-setup" | "/(tabs)/wallet" | "/(tabs)/profile" | "/(tabs)/payment-methods";
+  href?: "/(tabs)" | "/(tabs)/grinds" | "/(tabs)/log-grind" | "/(tabs)/log-grind-chat" | "/(tabs)/customers" | "/(tabs)/pricing-setup" | "/(tabs)/wallet" | "/(tabs)/profile" | "/(tabs)/payment-methods";
   action?: 'ai-chat';
 }
 
@@ -19,7 +19,7 @@ const navItems: NavItem[] = [
   // Inner layer (4 items)
   { label: 'Home', icon: 'home', href: '/(tabs)' },
   { label: 'Grinds', icon: 'reader', href: '/(tabs)/grinds' },
-  { label: 'Log', icon: 'game-controller', href: '/(tabs)/log-grind' },
+  { label: 'Log', icon: 'game-controller', href: '/(tabs)/log-grind-chat' },
   { label: 'Customers', icon: 'person-add', href: '/(tabs)/customers' },
   // Outer layer (5 items) - aligned with gaps and specific inner items
   { label: 'Pricing', icon: 'pricetag', href: '/(tabs)/pricing-setup' },

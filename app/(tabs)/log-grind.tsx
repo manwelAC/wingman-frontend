@@ -5,20 +5,20 @@ import { useTheme } from '@/constants/useTheme';
 import { calculatorApi, customerApi, gameApi, grindApi, paymentMethodApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    useColorScheme,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useColorScheme,
+  View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 const GAMES = ['CODM', 'MLBB', 'Valorant'];
 const SERVICE_TYPES = ['rank-boost', 'star-grind'];
@@ -53,7 +53,7 @@ export default function LogGrindScreen() {
 
   // Form state
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [selectedGame, setSelectedGame] = useState('CODM');
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [serviceType, setServiceType] = useState('rank-boost');
   const [startingTier, setStartingTier] = useState<GameRankTier | null>(null);
   const [targetTier, setTargetTier] = useState<GameRankTier | null>(null);
@@ -167,6 +167,7 @@ export default function LogGrindScreen() {
 
   const loadGameTiers = async () => {
     try {
+      if (!selectedGame) return;
       setLoading(true);
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
@@ -262,7 +263,7 @@ export default function LogGrindScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedCustomer || !startingTier || !targetTier || totalPrice === 0 || !selectedPaymentMethod) {
+    if (!selectedCustomer || !selectedGame || !startingTier || !targetTier || totalPrice === 0 || !selectedPaymentMethod) {
       alert('Please fill in all required fields and wait for price calculation');
       return;
     }
@@ -301,7 +302,7 @@ export default function LogGrindScreen() {
         // Reset form after showing success
         setTimeout(() => {
           setSelectedCustomer(null);
-          setSelectedGame('CODM');
+          setSelectedGame(null);
           setServiceType('rank-boost');
           setStartingTier(null);
           setTargetTier(null);
@@ -498,7 +499,7 @@ export default function LogGrindScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={primaryColor} />
           <Text style={{ marginTop: theme.spacing.lg, fontSize: 16, fontFamily: 'DMMono', fontWeight: 'bold', color: theme.colors.textPrimary }}>
-            Switching to {selectedGame}
+            Loading game tiers{selectedGame ? ` for ${selectedGame}` : ''}
           </Text>
         </View>
       </SafeAreaView>
@@ -721,7 +722,7 @@ export default function LogGrindScreen() {
             onPress={handleSubmit}
             variant="primary"
             fullWidth
-            disabled={submitting || !selectedCustomer || !startingTier || !targetTier || totalPrice === 0 || calculatingPrice || !selectedPaymentMethod}
+            disabled={submitting || !selectedCustomer || !selectedGame || !startingTier || !targetTier || totalPrice === 0 || calculatingPrice || !selectedPaymentMethod}
           />
         </View>
       </ScrollView>

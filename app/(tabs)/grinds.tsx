@@ -325,6 +325,68 @@ export default function GrindsScreen() {
     }
   };
 
+  const isOverdue = (dueDate: string | null, status: string | undefined) => {
+    if (!dueDate || status === 'completed' || status === 'cancelled') return false;
+    try {
+      const due = new Date(dueDate);
+      const now = new Date();
+      return due < now;
+    } catch {
+      return false;
+    }
+  };
+
+  const getDueDateDisplay = (dueDate: string | null, status?: string, completedAt?: string | null) => {
+    if (!dueDate) return null;
+    
+    // Handle completed grinds
+    if (status === 'completed' && completedAt) {
+      try {
+        const due = new Date(dueDate);
+        const completed = new Date(completedAt);
+        const diffTime = due.getTime() - completed.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays >= 0) {
+          return { text: 'Completed on time', formatted: 'on time', isOnTime: true };
+        } else {
+          return { text: `Completed ${Math.abs(diffDays)}d late`, formatted: 'late', isLate: true };
+        }
+      } catch {
+        return null;
+      }
+    }
+    
+    // Handle cancelled grinds
+    if (status === 'cancelled') {
+      return { text: 'Cancelled', formatted: 'cancelled', isCancelled: true };
+    }
+    
+    // Handle active grinds (not_started, in_progress)
+    try {
+      const due = new Date(dueDate);
+      const now = new Date();
+      const diffTime = due.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      const formatted = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      if (diffDays < 0) {
+        return { text: `${Math.abs(diffDays)}d overdue`, formatted, isOverdue: true };
+      } else if (diffDays === 0) {
+        return { text: 'Due today', formatted, isOverdue: false, isToday: true };
+      } else if (diffDays === 1) {
+        return { text: 'Due tomorrow', formatted, isOverdue: false };
+      } else if (diffDays <= 7) {
+        return { text: `Due in ${diffDays}d`, formatted, isOverdue: false };
+      } else {
+        return { text: formatted, formatted, isOverdue: false };
+      }
+    } catch {
+      return null;
+    }
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -477,6 +539,40 @@ export default function GrindsScreen() {
     progressText: {
       fontSize: 11,
       fontFamily: 'DMMono',
+      color: theme.colors.textSecondary,
+    },
+    dueDateContainer: {
+      marginTop: theme.spacing.md,
+      paddingTop: theme.spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    dueDateLabel: {
+      fontSize: 11,
+      fontFamily: 'DMMono',
+      color: theme.colors.textSecondary,
+    },
+    dueDateText: {
+      fontSize: 12,
+      fontFamily: 'DMMono-Medium',
+      fontWeight: 'bold',
+    },
+    dueDateOverdue: {
+      color: '#EF4444',
+    },
+    dueDateToday: {
+      color: '#F97316',
+    },
+    dueDateNormal: {
+      color: primaryColor,
+    },
+    dueDateLate: {
+      color: '#F97316',
+    },
+    dueDateCancelled: {
       color: theme.colors.textSecondary,
     },
     emptyState: {
@@ -789,6 +885,29 @@ export default function GrindsScreen() {
                   </View>
                   <Text style={styles.progressText}>{grind.progress_percentage}% complete</Text>
                 </View>
+
+                {/* Due Date Display */}
+                {grind.due_date && (
+                  <View style={styles.dueDateContainer}>
+                    <Text style={styles.dueDateLabel}>📅 Due</Text>
+                    <Text
+                      style={[
+                        styles.dueDateText,
+                        isOverdue(grind.due_date, grind.status)
+                          ? styles.dueDateOverdue
+                          : getDueDateDisplay(grind.due_date, grind.status, grind.completed_at)?.isToday
+                          ? styles.dueDateToday
+                          : getDueDateDisplay(grind.due_date, grind.status, grind.completed_at)?.isLate
+                          ? styles.dueDateLate
+                          : getDueDateDisplay(grind.due_date, grind.status, grind.completed_at)?.isCancelled
+                          ? styles.dueDateCancelled
+                          : styles.dueDateNormal,
+                      ]}
+                    >
+                      {getDueDateDisplay(grind.due_date, grind.status, grind.completed_at)?.text}
+                    </Text>
+                  </View>
+                )}
                 </View>
               </Pressable>
             ))}
@@ -1182,7 +1301,7 @@ export default function GrindsScreen() {
                   </View>
 
                   {/* Footer */}
-                  <View style={{ alignItems: 'center', borderTopWidth: 2, borderTopColor: '#E5E7EB', paddingTopWidth: theme.spacing.lg, marginTop: theme.spacing.lg }}>
+                  <View style={{ alignItems: 'center', borderTopWidth: 2, borderTopColor: '#E5E7EB', paddingTop: theme.spacing.lg, marginTop: theme.spacing.lg }}>
                     <Text style={{ fontSize: 10, fontFamily: 'DMMono', color: '#6B7280', marginTop: 8 }}>
                       Generated: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>

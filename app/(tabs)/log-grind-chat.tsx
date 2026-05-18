@@ -1,4 +1,5 @@
 import FloatingNav from '@/components/ui/FloatingNav';
+import PaymentMethodCarousel from '@/components/ui/PaymentMethodCarousel';
 import { useTheme } from '@/constants/useTheme';
 import { calculatorApi, customerApi, gameApi, grindApi, paymentMethodApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +30,7 @@ interface Message {
     id: string;
     label: string;
   }>;
+  showCarousel?: boolean;
 }
 
 interface GrindFormData {
@@ -377,6 +379,79 @@ export default function LogGrindChatScreen() {
         }
   };
 
+  const handlePaymentMethodSelect = (methodId: string, methodName: string) => {
+    const selectedMethod = paymentMethods.find((m: any) => m.id.toString() === methodId);
+    if (selectedMethod) {
+      const methodType = availableMethods.find((m) => m.id === selectedMethod.payment_method_type_id);
+      
+      // Add user message showing selection
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: `💳 Selected: ${methodName}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+
+      setFormData((prev) => ({
+        ...prev,
+        paymentMethodId: selectedMethod.payment_method_type_id,
+        paymentMethod: methodType?.name || methodName,
+      }));
+      setStep('tiers');
+      setIsLoading(true);
+      setTiersLoading(true);
+
+      const fetchAndDisplayTiers = async () => {
+        try {
+          const token = await AsyncStorage.getItem('authToken');
+          if (!token) return;
+
+          console.log('🔍 Fetching tiers for game:', selectedGame);
+          const response = await gameApi.fetchRankTiers(selectedGame || '', token);
+          console.log('📡 Tiers API response:', response.success, response.data?.tiers?.length || 0, 'tiers');
+          if (response.success && response.data?.tiers) {
+            setTiers(response.data.tiers);
+            setTierPage(0);
+
+            const aiMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              type: 'ai',
+              content: `Perfect! Now, what's your starting tier?`,
+              timestamp: new Date(),
+              actionButtons: getTierButtonsWithPagination(response.data.tiers, 0),
+            };
+            setMessages((prev) => [...prev, aiMessage]);
+          } else {
+            const aiMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              type: 'ai',
+              content: `Hmm, couldn't load tiers for ${selectedGame}. Try again?`,
+              timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, aiMessage]);
+          }
+          setIsLoading(false);
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        } catch (error) {
+          console.error('Error fetching tiers:', error);
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'ai',
+            content: `Sorry, I couldn't load the tiers. Please try again.`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          setIsLoading(false);
+        } finally {
+          setTiersLoading(false);
+        }
+      };
+
+      fetchAndDisplayTiers();
+    }
+  };
+
   const handleQuickReply = (buttonId: string, buttonLabel: string) => {
     // Handle review confirmation
     if (buttonId === 'confirm') {
@@ -397,6 +472,11 @@ export default function LogGrindChatScreen() {
             throw new Error('No auth token found');
           }
 
+          // Validate all required fields are present
+          if (!formData.customerId || !formData.game || !formData.serviceType || !formData.startingTierId || !formData.targetTierId) {
+            throw new Error('Missing required grind information');
+          }
+
           // Prepare grind payload with correct structure for API
           // Convert "Rank Boost" to "rank_boost" format for API validation
           const serviceTypeMap: Record<string, string> = {
@@ -408,14 +488,14 @@ export default function LogGrindChatScreen() {
           const grindPayload = {
             customer_id: formData.customerId,
             game: formData.game,
-            service_type: serviceTypeMap[formData.serviceType!] || formData.serviceType,
+            service_type: serviceTypeMap[formData.serviceType] || formData.serviceType,
             starting_tier_id: formData.startingTierId,
             target_tier_id: formData.targetTierId,
-            account_username: formData.accountUsername,
-            special_instructions: formData.specialInstructions,
-            payment_method_type_id: formData.paymentMethodId,
             base_price: formData.basePrice || 0,
             final_price: formData.finalPrice || 0,
+            account_username: formData.accountUsername || '',
+            special_instructions: formData.specialInstructions || 'None',
+            payment_method_type_id: formData.paymentMethodId || 0,
             due_date: formData.dueDateObj ? formatDueDate(formData.dueDateObj) : null,
           };
 
@@ -433,7 +513,7 @@ export default function LogGrindChatScreen() {
           const aiMessage: Message = {
             id: (Date.now() + 1).toString(),
             type: 'ai',
-            content: `🎉 Grind logged successfully! Grind #${response.data?.grind?.grind_number}. We'll keep you updated on progress. Good luck, Pilot!`,
+            content: `🎉 Grind logged successfully! Grind #${response.data?.grind_number}. We'll keep you updated on progress. Good luck, Pilot!`,
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, aiMessage]);
@@ -699,21 +779,13 @@ export default function LogGrindChatScreen() {
             setPaymentMethods(activeMethods);
           }
 
-          // Now create the message with payment method buttons
-          const buttons = activeMethods.slice(0, 3).map((method: any) => {
-            const methodTypeName = typeMap[method.payment_method_type_id] || 'Payment Method';
-            return {
-              id: method.id.toString(),
-              label: methodTypeName,
-            };
-          });
-
+          // Now create the message with payment method carousel
           const aiMessage: Message = {
             id: (Date.now() + 1).toString(),
             type: 'ai',
             content: 'Great! Now, which payment method would you like to use?',
             timestamp: new Date(),
-            actionButtons: buttons.length > 0 ? buttons : undefined,
+            showCarousel: activeMethods.length > 0,
           };
           setMessages((prev) => [...prev, aiMessage]);
           setIsLoading(false);
@@ -735,69 +807,9 @@ export default function LogGrindChatScreen() {
 
       fetchAndRespond();
     }
-    // Handle payment method selection
-    else if (step === 'payment') {
-      const selectedMethod = paymentMethods.find((m: any) => m.id.toString() === buttonId);
-      if (selectedMethod) {
-        const methodType = availableMethods.find((m) => m.id === selectedMethod.payment_method_type_id);
-        setFormData((prev) => ({ 
-          ...prev, 
-          paymentMethodId: selectedMethod.payment_method_type_id,
-          paymentMethod: methodType?.name || buttonLabel 
-        }));
-        setStep('tiers');
-        setIsLoading(true);
-        setTiersLoading(true);
-
-        const fetchAndDisplayTiers = async () => {
-          try {
-            const token = await AsyncStorage.getItem('authToken');
-            if (!token) return;
-
-            console.log('🔍 Fetching tiers for game:', selectedGame);
-            const response = await gameApi.fetchRankTiers(selectedGame || '', token);
-            console.log('📡 Tiers API response:', response.success, response.data?.tiers?.length || 0, 'tiers');
-            if (response.success && response.data?.tiers) {
-              setTiers(response.data.tiers);
-              setTierPage(0);
-
-              const aiMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                type: 'ai',
-                content: `Perfect! ${buttonLabel} it is. Now, what's your starting tier?`,
-                timestamp: new Date(),
-                actionButtons: getTierButtonsWithPagination(response.data.tiers, 0),
-              };
-              setMessages((prev) => [...prev, aiMessage]);
-            } else {
-              const aiMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                type: 'ai',
-                content: `Hmm, couldn't load tiers for ${selectedGame}. Try again?`,
-                timestamp: new Date(),
-              };
-              setMessages((prev) => [...prev, aiMessage]);
-            }
-            setIsLoading(false);
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-          } catch (error) {
-            console.error('Error fetching tiers:', error);
-            const aiMessage: Message = {
-              id: (Date.now() + 1).toString(),
-              type: 'ai',
-              content: `Sorry, I couldn't load the tiers. Please try again.`,
-              timestamp: new Date(),
-            };
-            setMessages((prev) => [...prev, aiMessage]);
-            setIsLoading(false);
-          } finally {
-            setTiersLoading(false);
-          }
-        };
-
-        fetchAndDisplayTiers();
-      }
-    } else if (step === 'tiers') {
+    // Handle payment method selection - now handled by carousel callback
+    // Removed - carousel uses handlePaymentMethodSelect directly
+    else if (step === 'tiers') {
       // Handle starting tier selection - show tiers in chat
       setTierSelectionStep('starting');
       setTierPage(0);
@@ -1330,6 +1342,18 @@ export default function LogGrindChatScreen() {
                 </Text>
               </View>
 
+              {/* Payment Method Carousel */}
+              {message.showCarousel && step === 'payment' && (
+                <View style={{ marginTop: theme.spacing.md }}>
+                  <PaymentMethodCarousel
+                    methods={paymentMethods}
+                    availableMethods={availableMethods}
+                    onSelect={handlePaymentMethodSelect}
+                    loading={isLoading}
+                  />
+                </View>
+              )}
+
               {/* Action Buttons */}
               {message.actionButtons && message.actionButtons.length > 0 && (
                 <View style={styles.actionButtons}>
@@ -1371,7 +1395,7 @@ export default function LogGrindChatScreen() {
           <Pressable
             style={styles.sendButton}
             onPress={handleSendMessage}
-            disabled={isLoading || !inputValue.trim()}
+            disabled={isLoading || (!inputValue.trim() && step !== 'specialInstructions')}
           >
             <Ionicons
               name={isLoading ? 'hourglass' : 'send'}

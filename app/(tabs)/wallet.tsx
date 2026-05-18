@@ -6,6 +6,7 @@ import { useTheme } from '@/constants/useTheme';
 import { paymentMethodApi, walletApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -83,21 +84,26 @@ export default function WalletScreen() {
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadWalletData = useCallback(async () => {
+  const loadWalletData = useCallback(async (skipCache = false) => {
     try {
       setError(null);
 
-      // Load from cache first
-      const cachedWalletSummary = await AsyncStorage.getItem('cachedWalletSummary');
-      const cachedEarningsByMethod = await AsyncStorage.getItem('cachedEarningsByMethod');
-      const cachedUserMethodIds = await AsyncStorage.getItem('cachedUserMethodIds');
+      // Load from cache first (unless skipCache is true)
+      if (!skipCache) {
+        const cachedWalletSummary = await AsyncStorage.getItem('cachedWalletSummary');
+        const cachedEarningsByMethod = await AsyncStorage.getItem('cachedEarningsByMethod');
+        const cachedUserMethodIds = await AsyncStorage.getItem('cachedUserMethodIds');
 
-      if (cachedWalletSummary && cachedEarningsByMethod && cachedUserMethodIds) {
-        setWalletSummary(JSON.parse(cachedWalletSummary));
-        const cachedMethods = JSON.parse(cachedUserMethodIds);
-        setUserPaymentMethodIds(cachedMethods);
-        setEarningsByMethod(JSON.parse(cachedEarningsByMethod));
+        if (cachedWalletSummary && cachedEarningsByMethod && cachedUserMethodIds) {
+          setWalletSummary(JSON.parse(cachedWalletSummary));
+          const cachedMethods = JSON.parse(cachedUserMethodIds);
+          setUserPaymentMethodIds(cachedMethods);
+          setEarningsByMethod(JSON.parse(cachedEarningsByMethod));
+        } else {
+          setIsLoading(true);
+        }
       } else {
+        // Force fresh load
         setIsLoading(true);
       }
 
@@ -219,9 +225,18 @@ export default function WalletScreen() {
     [selectedMethod]
   );
 
+  // Load wallet data on mount
   useEffect(() => {
     loadWalletData();
   }, [loadWalletData]);
+
+  // Refresh wallet data when screen comes back into focus (e.g., after deleting a grind)
+  useFocusEffect(
+    useCallback(() => {
+      // Force fresh fetch, skip cache
+      loadWalletData(true);
+    }, [loadWalletData])
+  );
 
   useEffect(() => {
     if (showTimelineModal && selectedMethod) {

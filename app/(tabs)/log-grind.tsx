@@ -278,16 +278,16 @@ export default function LogGrindScreen() {
 
       const response = await grindApi.createGrind(
         {
-          customer_id: selectedCustomer.id,
-          game: selectedGame,
+          customer_id: selectedCustomer!.id,
+          game: selectedGame!,
           service_type: serviceType.replace('-', '_'),
-          starting_tier_id: startingTier.id,
-          target_tier_id: targetTier.id,
+          starting_tier_id: startingTier!.id,
+          target_tier_id: targetTier!.id,
           base_price: totalPrice,
           final_price: totalPrice,
           account_username: accountUsername,
           special_instructions: specialInstructions,
-          payment_method_type_id: selectedPaymentMethod.payment_method_type_id || selectedPaymentMethod.id,
+          payment_method_type_id: selectedPaymentMethod!.payment_method_type_id || selectedPaymentMethod!.id,
           due_date: dueDate ? formatDueDate(dueDate) : null,
         },
         token

@@ -1,15 +1,14 @@
 import FloatingNav from '@/components/ui/FloatingNav';
 import { useTheme } from '@/constants/useTheme';
-import { customerApi, gameApi, paymentMethodApi } from '@/services/api';
+import { calculatorApi, customerApi, gameApi, grindApi, paymentMethodApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useRef, useState } from 'react';
 import {
   Animated,
-  FlatList,
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   SafeAreaView,
@@ -33,15 +32,22 @@ interface Message {
 }
 
 interface GrindFormData {
+  customerId?: number;
   customer?: string;
   game?: string;
   serviceType?: string;
+  paymentMethodId?: number;
   paymentMethod?: string;
+  startingTierId?: number;
   startingTier?: string;
+  targetTierId?: number;
   targetTier?: string;
   accountUsername?: string;
   specialInstructions?: string;
+  dueDateObj?: Date | null;
   dueDate?: string;
+  basePrice?: number;
+  finalPrice?: number;
 }
 
 export default function LogGrindChatScreen() {
@@ -52,7 +58,7 @@ export default function LogGrindChatScreen() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState<GrindFormData>({});
-  const [step, setStep] = useState<'customer' | 'game' | 'service' | 'payment' | 'tiers' | 'targetTier' | 'username' | 'review'>('customer');
+  const [step, setStep] = useState<'customer' | 'game' | 'service' | 'payment' | 'tiers' | 'targetTier' | 'username' | 'specialInstructions' | 'dueDate' | 'review'>('customer');
   const [customers, setCustomers] = useState<Array<{ id: number; display_name: string }>>([]);
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customersError, setCustomersError] = useState<string | null>(null);
@@ -61,8 +67,11 @@ export default function LogGrindChatScreen() {
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
   const [tiers, setTiers] = useState<any[]>([]);
   const [tiersLoading, setTiersLoading] = useState(false);
-  const [showTierModal, setShowTierModal] = useState(false);
   const [tierSelectionStep, setTierSelectionStep] = useState<'starting' | 'target' | null>(null);
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
+  const [tierPage, setTierPage] = useState(0);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Fetch customers on mount
@@ -109,12 +118,13 @@ export default function LogGrindChatScreen() {
   }, [customers]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+    // Allow empty input only for specialInstructions (optional field)
+    if (!inputValue.trim() && step !== 'specialInstructions') return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue,
+      content: inputValue || '(skipped)',
       timestamp: new Date(),
     };
 
@@ -156,6 +166,46 @@ export default function LogGrindChatScreen() {
         setIsLoading(false);
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 600);
+    } else if (step === 'username') {
+      // Handle username input
+      setFormData((prev) => ({ ...prev, accountUsername: searchQuery }));
+      setStep('specialInstructions');
+      setIsLoading(true);
+      setTimeout(() => {
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: `Got it! Username: ${searchQuery}. Any special instructions or notes for this grind? (Optional - press send to skip)`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 600);
+    } else if (step === 'specialInstructions') {
+      // Handle special instructions - can be empty
+      setFormData((prev) => ({ ...prev, specialInstructions: searchQuery || 'None' }));
+      setStep('dueDate');
+      setIsLoading(true);
+      setTimeout(() => {
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: `Got it! Any due date for this grind? (Optional - press skip to continue)`,
+          timestamp: new Date(),
+          actionButtons: [
+            { id: 'set-date', label: '📅 Set Date & Time' },
+            { id: 'skip-date', label: '⏭️ Skip' },
+          ],
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 600);
+      Keyboard.dismiss();
+      return;
+    } else if (step === 'dueDate' && inputValue.trim()) {
+      // Special handling for date input - not used in chat, skip
     } else {
       // Other steps - simulate AI response
       setIsLoading(true);
@@ -170,7 +220,363 @@ export default function LogGrindChatScreen() {
     Keyboard.dismiss();
   };
 
+  const handleDateChange = (event: any, selectedDate: Date | undefined) => {
+    if (selectedDate) {
+      const newDate = new Date(formData.dueDateObj || new Date());
+      newDate.setFullYear(selectedDate.getFullYear());
+      newDate.setMonth(selectedDate.getMonth());
+      newDate.setDate(selectedDate.getDate());
+      setFormData((prev) => ({ ...prev, dueDateObj: newDate }));
+      // Show time picker after date is selected
+      setShowDatePicker(false);
+      setTimeout(() => {
+        setShowTimePicker(true);
+      }, 500);
+    } else {
+      setShowDatePicker(false);
+    }
+  };
+
+  const handleTimeChange = (event: any, selectedTime: Date | undefined) => {
+    if (selectedTime) {
+      const newDate = new Date(formData.dueDateObj || new Date());
+      newDate.setHours(selectedTime.getHours());
+      newDate.setMinutes(selectedTime.getMinutes());
+      const updatedFormData = { ...formData, dueDateObj: newDate };
+      setFormData(updatedFormData);
+      // Show confirmation message and proceed to review
+      setShowTimePicker(false);
+      setStep('review');
+      setIsLoading(true);
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: `📅 Due date set to ${formatDueDateForDisplay(newDate)}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setTimeout(() => {
+        proceedToReview(updatedFormData);
+      }, 600);
+    } else {
+      setShowTimePicker(false);
+    }
+  };
+
+  const formatDueDate = (date: Date | null) => {
+    if (!date) return null;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  };
+
+  const formatDueDateForDisplay = (date: Date | null) => {
+    if (!date) return 'Not set';
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) +
+      ' at ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const proceedToReview = async (updatedFormData: GrindFormData) => {
+        try {
+          const token = await AsyncStorage.getItem('authToken');
+          if (!token) throw new Error('No auth token');
+
+          // Convert service type to API format
+          const serviceTypeMap: Record<string, string> = {
+            'Rank Boost': 'rank_boost',
+            'Win Count': 'win_count',
+            'Star Grind': 'rank_boost',
+          };
+
+          const calculatorResponse = await calculatorApi.calculateRankBoost(
+            {
+              game: updatedFormData.game || '',
+              service_type: serviceTypeMap[updatedFormData.serviceType!] || updatedFormData.serviceType || '',
+              starting_tier_id: updatedFormData.startingTierId || 0,
+              target_tier_id: updatedFormData.targetTierId || 0,
+            },
+            token
+          );
+
+          let priceDisplay = 'Calculating...';
+          if (calculatorResponse.success && calculatorResponse.data) {
+            const basePrice = calculatorResponse.data.base_price || 0;
+            const finalPrice = calculatorResponse.data.final_price || basePrice;
+            updatedFormData.basePrice = basePrice;
+            updatedFormData.finalPrice = finalPrice;
+            priceDisplay = `₱${finalPrice.toFixed(2)}`;
+          }
+
+          setFormData(updatedFormData);
+
+          // Build summary with pricing and due date
+          const dueDateDisplay = updatedFormData.dueDateObj ? formatDueDateForDisplay(updatedFormData.dueDateObj) : 'Not set';
+          const summary = `
+📋 **GRIND SUMMARY**
+━━━━━━━━━━━━━━━━━
+👤 Customer: ${updatedFormData.customer}
+🎮 Game: ${updatedFormData.game}
+⚙️ Service: ${updatedFormData.serviceType}
+💳 Payment: ${updatedFormData.paymentMethod}
+📊 Boost: ${updatedFormData.startingTier} → ${updatedFormData.targetTier}
+👤 Username: ${updatedFormData.accountUsername}
+📝 Notes: ${updatedFormData.specialInstructions}
+📅 Due: ${dueDateDisplay}
+💰 Price: ${priceDisplay}
+━━━━━━━━━━━━━━━━━
+          `.trim();
+
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'ai',
+            content: summary,
+            timestamp: new Date(),
+            actionButtons: [
+              { id: 'confirm', label: '✅ Confirm & Submit' },
+              { id: 'cancel', label: '❌ Cancel' },
+            ],
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          setIsLoading(false);
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        } catch (error) {
+          console.error('Error calculating price:', error);
+          
+          // Build summary without pricing on error
+          const dueDateDisplay = updatedFormData.dueDateObj ? formatDueDateForDisplay(updatedFormData.dueDateObj) : 'Not set';
+          const summary = `
+📋 **GRIND SUMMARY**
+━━━━━━━━━━━━━━━━━
+👤 Customer: ${updatedFormData.customer}
+🎮 Game: ${updatedFormData.game}
+⚙️ Service: ${updatedFormData.serviceType}
+💳 Payment: ${updatedFormData.paymentMethod}
+📊 Boost: ${updatedFormData.startingTier} → ${updatedFormData.targetTier}
+👤 Username: ${updatedFormData.accountUsername}
+📝 Notes: ${updatedFormData.specialInstructions}
+📅 Due: ${dueDateDisplay}
+━━━━━━━━━━━━━━━━━
+          `.trim();
+
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'ai',
+            content: summary,
+            timestamp: new Date(),
+            actionButtons: [
+              { id: 'confirm', label: '✅ Confirm & Submit' },
+              { id: 'cancel', label: '❌ Cancel' },
+            ],
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          setIsLoading(false);
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }
+  };
+
   const handleQuickReply = (buttonId: string, buttonLabel: string) => {
+    // Handle review confirmation
+    if (buttonId === 'confirm') {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: '✅ Submitting grind...',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setIsLoading(true);
+      
+      // Call API to create grind
+      const createGrind = async () => {
+        try {
+          const token = await AsyncStorage.getItem('authToken');
+          if (!token) {
+            throw new Error('No auth token found');
+          }
+
+          // Prepare grind payload with correct structure for API
+          // Convert "Rank Boost" to "rank_boost" format for API validation
+          const serviceTypeMap: Record<string, string> = {
+            'Rank Boost': 'rank_boost',
+            'Win Count': 'win_count',
+            'Star Grind': 'rank_boost', // Map to rank_boost
+          };
+          
+          const grindPayload = {
+            customer_id: formData.customerId,
+            game: formData.game,
+            service_type: serviceTypeMap[formData.serviceType!] || formData.serviceType,
+            starting_tier_id: formData.startingTierId,
+            target_tier_id: formData.targetTierId,
+            account_username: formData.accountUsername,
+            special_instructions: formData.specialInstructions,
+            payment_method_type_id: formData.paymentMethodId,
+            base_price: formData.basePrice || 0,
+            final_price: formData.finalPrice || 0,
+            due_date: formData.dueDateObj ? formatDueDate(formData.dueDateObj) : null,
+          };
+
+          // Log payload for debugging
+          console.log('📤 Submitting grind:', grindPayload);
+
+          // Call actual API endpoint
+          const response = await grindApi.createGrind(grindPayload, token);
+          
+          if (!response.success) {
+            throw new Error(response.message || 'Failed to create grind');
+          }
+
+          // Success response
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'ai',
+            content: `🎉 Grind logged successfully! Grind #${response.data?.grind?.grind_number}. We'll keep you updated on progress. Good luck, Pilot!`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          
+          // Reset form for next grind
+          setFormData({});
+          setStep('customer');
+          setIsLoading(false);
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        } catch (error) {
+          console.error('Error creating grind:', error);
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'ai',
+            content: `❌ Oops! Failed to create grind. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          setIsLoading(false);
+        }
+      };
+
+      createGrind();
+      return;
+    }
+
+    if (buttonId === 'cancel') {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: 'Cancelled',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setFormData({});
+      setStep('customer');
+      setIsLoading(true);
+      
+      setTimeout(() => {
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: `No problem! Let's start over. Which customer is this grind for?`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 600);
+      return;
+    }
+
+    // Handle due date buttons
+    if (step === 'dueDate') {
+      if (buttonId === 'set-date') {
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          type: 'user',
+          content: '📅 Setting date and time...',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        
+        // Initialize date to today if not set
+        if (!formData.dueDateObj) {
+          setFormData((prev) => ({ ...prev, dueDateObj: new Date() }));
+        }
+        setShowDatePicker(true);
+        return;
+      } else if (buttonId === 'skip-date') {
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          type: 'user',
+          content: '⏭️ Skipping due date',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setStep('review');
+        setIsLoading(true);
+        const updatedFormData = { ...formData, dueDateObj: null };
+        setFormData(updatedFormData);
+        setTimeout(() => {
+          proceedToReview(updatedFormData);
+        }, 600);
+        return;
+      }
+    }
+
+    // Handle pagination buttons
+    if (buttonId === '__next_page__') {
+      setTierPage((prev) => prev + 1);
+      setIsLoading(true);
+      setTimeout(() => {
+        let tiersToFilter = tiers;
+        // For target tier, filter to only higher tiers
+        if (step === 'targetTier' && formData.startingTier) {
+          const startingTierObj = tiers.find((t: any) => t.tier_name === formData.startingTier);
+          const startingTierOrder = startingTierObj?.tier_order || 0;
+          tiersToFilter = tiers.filter((t: any) => t.tier_order > startingTierOrder);
+        }
+        
+        const buttons = getTierButtonsWithPagination(tiersToFilter, tierPage + 1);
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: step === 'tiers' ? 'Select your starting tier:' : 'Select your target tier:',
+          timestamp: new Date(),
+          actionButtons: buttons,
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+      return;
+    }
+
+    if (buttonId === '__prev_page__') {
+      setTierPage((prev) => Math.max(0, prev - 1));
+      setIsLoading(true);
+      setTimeout(() => {
+        let tiersToFilter = tiers;
+        // For target tier, filter to only higher tiers
+        if (step === 'targetTier' && formData.startingTier) {
+          const startingTierObj = tiers.find((t: any) => t.tier_name === formData.startingTier);
+          const startingTierOrder = startingTierObj?.tier_order || 0;
+          tiersToFilter = tiers.filter((t: any) => t.tier_order > startingTierOrder);
+        }
+        
+        const buttons = getTierButtonsWithPagination(tiersToFilter, Math.max(0, tierPage - 1));
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: step === 'tiers' ? 'Select your starting tier:' : 'Select your target tier:',
+          timestamp: new Date(),
+          actionButtons: buttons,
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -180,9 +586,60 @@ export default function LogGrindChatScreen() {
 
     setMessages((prev) => [...prev, userMessage]);
 
+    // Handle due date buttons
+    if (step === 'dueDate') {
+      if (buttonId === 'set-date') {
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          type: 'user',
+          content: '📅 Setting date and time...',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        
+        // Initialize date to today if not set
+        if (!formData.dueDateObj) {
+          setFormData((prev) => ({ ...prev, dueDateObj: new Date() }));
+        }
+        setShowDatePicker(true);
+        return;
+      } else if (buttonId === 'skip-date') {
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          type: 'user',
+          content: '⏭️ Skipping due date',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setStep('review');
+        setIsLoading(true);
+        const updatedFormData = { ...formData, dueDateObj: null };
+        setFormData(updatedFormData);
+        setTimeout(() => {
+          proceedToReview(updatedFormData);
+        }, 600);
+        return;
+      }
+    }
+
+    // Handle tier selection (starting or target)
+    if (step === 'tiers' || step === 'targetTier') {
+      const selectedTier = tiers.find((t: any) => t.id.toString() === buttonId);
+      if (selectedTier) {
+        // Determine which tier selection step we're on
+        const tierStep = step === 'tiers' ? 'starting' : 'target';
+        handleTierSelection(selectedTier, tierStep);
+        return;
+      }
+    }
+
     // Handle customer selection
     if (step === 'customer') {
-      setFormData((prev) => ({ ...prev, customer: buttonLabel }));
+      setFormData((prev) => ({ 
+        ...prev, 
+        customerId: parseInt(buttonId),
+        customer: buttonLabel 
+      }));
       setStep('game');
       setIsLoading(true);
       setTimeout(() => {
@@ -283,7 +740,11 @@ export default function LogGrindChatScreen() {
       const selectedMethod = paymentMethods.find((m: any) => m.id.toString() === buttonId);
       if (selectedMethod) {
         const methodType = availableMethods.find((m) => m.id === selectedMethod.payment_method_type_id);
-        setFormData((prev) => ({ ...prev, paymentMethod: methodType?.name || buttonLabel }));
+        setFormData((prev) => ({ 
+          ...prev, 
+          paymentMethodId: selectedMethod.payment_method_type_id,
+          paymentMethod: methodType?.name || buttonLabel 
+        }));
         setStep('tiers');
         setIsLoading(true);
         setTiersLoading(true);
@@ -293,28 +754,26 @@ export default function LogGrindChatScreen() {
             const token = await AsyncStorage.getItem('authToken');
             if (!token) return;
 
-            const response = await gameApi.fetchRankTiers(formData.game || '', token);
+            console.log('🔍 Fetching tiers for game:', selectedGame);
+            const response = await gameApi.fetchRankTiers(selectedGame || '', token);
+            console.log('📡 Tiers API response:', response.success, response.data?.tiers?.length || 0, 'tiers');
             if (response.success && response.data?.tiers) {
               setTiers(response.data.tiers);
-
-              // Create tier buttons (show first 5 or all if less)
-              const tierButtons = response.data.tiers.slice(0, 5).map((tier: any) => ({
-                id: tier.id.toString(),
-                label: tier.tier_name || tier.name,
-              }));
+              setTierPage(0);
 
               const aiMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 type: 'ai',
-                content: `Perfect! ${buttonLabel} it is. Now, what's your starting tier? Tap below to select.`,
+                content: `Perfect! ${buttonLabel} it is. Now, what's your starting tier?`,
                 timestamp: new Date(),
+                actionButtons: getTierButtonsWithPagination(response.data.tiers, 0),
               };
               setMessages((prev) => [...prev, aiMessage]);
             } else {
               const aiMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 type: 'ai',
-                content: `Hmm, couldn't load tiers for ${formData.game}. Try again?`,
+                content: `Hmm, couldn't load tiers for ${selectedGame}. Try again?`,
                 timestamp: new Date(),
               };
               setMessages((prev) => [...prev, aiMessage]);
@@ -339,15 +798,16 @@ export default function LogGrindChatScreen() {
         fetchAndDisplayTiers();
       }
     } else if (step === 'tiers') {
-      // Handle starting tier selection - open modal
+      // Handle starting tier selection - show tiers in chat
       setTierSelectionStep('starting');
+      setTierPage(0);
       if (tiers.length === 0) {
         // Fetch tiers if not already loaded
-        const fetchTiersForModal = async () => {
+        const fetchTiersForChat = async () => {
           try {
             const token = await AsyncStorage.getItem('authToken');
             if (!token) return;
-            const response = await gameApi.fetchRankTiers(formData.game || '', token);
+            const response = await gameApi.fetchRankTiers(selectedGame || '', token);
             if (response.success && response.data?.tiers) {
               setTiers(response.data.tiers);
             }
@@ -355,13 +815,43 @@ export default function LogGrindChatScreen() {
             console.error('Error fetching tiers:', error);
           }
         };
-        fetchTiersForModal();
+        fetchTiersForChat();
       }
-      setShowTierModal(true);
+      setIsLoading(true);
+      setTimeout(() => {
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: `Perfect! Now select your starting tier:`,
+          timestamp: new Date(),
+          actionButtons: getTierButtonsWithPagination(tiers, 0),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 300);
     } else if (step === 'targetTier') {
-      // Handle target tier selection - open modal
+      // Handle target tier selection - show tiers in chat
       setTierSelectionStep('target');
-      setShowTierModal(true);
+      setTierPage(0);
+      setIsLoading(true);
+      setTimeout(() => {
+        // Filter tiers to only show those higher than starting tier
+        const startingTierObj = tiers.find((t: any) => t.tier_name === formData.startingTier);
+        const startingTierOrder = startingTierObj?.tier_order || 0;
+        const filteredTiers = tiers.filter((t: any) => t.tier_order > startingTierOrder);
+        
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: `Now select your target tier:`,
+          timestamp: new Date(),
+          actionButtons: getTierButtonsWithPagination(filteredTiers, 0),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 300);
     } else {
       // Simulate AI response for other steps
       setIsLoading(true);
@@ -389,10 +879,35 @@ export default function LogGrindChatScreen() {
     };
   };
 
+  const getTierButtonsWithPagination = (tiersArray: any[], page: number = 0) => {
+    const TIERS_PER_PAGE = 5;
+    const totalPages = Math.ceil(tiersArray.length / TIERS_PER_PAGE);
+    const startIdx = page * TIERS_PER_PAGE;
+    const endIdx = startIdx + TIERS_PER_PAGE;
+    const paginatedTiers = tiersArray.slice(startIdx, endIdx);
+    
+    const buttons = paginatedTiers.map((tier: any) => ({
+      id: tier.id.toString(),
+      label: tier.tier_name || tier.name,
+    }));
+    
+    // Add pagination buttons
+    if (page > 0) {
+      buttons.unshift({ id: '__prev_page__', label: '← Prev' });
+    }
+    
+    if (page < totalPages - 1) {
+      buttons.push({ id: '__next_page__', label: 'Next →' });
+    }
+    
+    return buttons;
+  };
+
   const generateAIResponseForButton = (buttonId: string, buttonLabel: string): Message => {
     // Handle game selection
     if (step === 'game') {
       setFormData((prev) => ({ ...prev, game: buttonLabel }));
+      setSelectedGame(buttonLabel);
       setStep('service');
       
       const gameResponses: Record<string, { text: string; buttons: Array<{ id: string; label: string }> }> = {
@@ -436,54 +951,58 @@ export default function LogGrindChatScreen() {
     };
   };
 
-  const handleTierSelection = (tier: any) => {
+  const handleTierSelection = (tier: any, tierStep: 'starting' | 'target') => {
     const tierName = tier.tier_name || tier.name;
     
-    if (tierSelectionStep === 'starting') {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        type: 'user',
-        content: tierName,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, userMessage]);
-      setFormData((prev) => ({ ...prev, startingTier: tierName }));
-      setShowTierModal(false);
+    if (tierStep === 'starting') {
+      setFormData((prev) => ({ 
+        ...prev, 
+        startingTierId: tier.id,
+        startingTier: tierName 
+      }));
+      setTierSelectionStep('starting');
       setStep('targetTier');
+      setTierPage(0);
       setIsLoading(true);
       setTimeout(() => {
+        const filteredTiers = tiers.filter((t: any) => t.tier_order > tier.tier_order);
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: 'ai',
-          content: `Great! Starting at ${tierName}. Now, what's your target tier? Tap below to select.`,
+          content: `Great! Starting at ${tierName}. Now, what's your target tier?`,
           timestamp: new Date(),
+          actionButtons: getTierButtonsWithPagination(filteredTiers, 0),
         };
         setMessages((prev) => [...prev, aiMessage]);
         setIsLoading(false);
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 600);
-    } else if (tierSelectionStep === 'target') {
+      }, 300);
+    } else if (tierStep === 'target') {
       // Validate target tier > starting tier
       const startingTierObj = tiers.find((t: any) => t.tier_name === formData.startingTier);
       const startingTierOrder = startingTierObj?.tier_order || 0;
       const targetTierOrder = tier.tier_order || 0;
       
       if (targetTierOrder <= startingTierOrder) {
-        // Show error in modal
-        alert('Target tier must be higher than starting tier!');
+        // Show error message in chat
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: `Target tier must be higher than starting tier! Please select again.`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
         return;
       }
       
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        type: 'user',
-        content: tierName,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, userMessage]);
-      setFormData((prev) => ({ ...prev, targetTier: tierName }));
-      setShowTierModal(false);
+      setFormData((prev) => ({ 
+        ...prev, 
+        targetTierId: tier.id,
+        targetTier: tierName 
+      }));
+      setTierSelectionStep('target');
       setStep('username');
+      setTierPage(0);
       setIsLoading(true);
       setTimeout(() => {
         const aiMessage: Message = {
@@ -495,7 +1014,7 @@ export default function LogGrindChatScreen() {
         setMessages((prev) => [...prev, aiMessage]);
         setIsLoading(false);
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 600);
+      }, 300);
     }
   };
 
@@ -671,9 +1190,8 @@ export default function LogGrindChatScreen() {
     modalContent: {
       backgroundColor: `rgba(${theme.colors.background === '#1a1a2e' ? '26, 26, 46' : '255, 255, 255'}, 0.9)`,
       borderRadius: 20,
-      maxHeight: '70%',
+      maxHeight: '80%',
       width: '100%',
-      paddingTop: theme.spacing.lg,
       borderWidth: 1,
       borderColor: primaryColor,
       shadowColor: '#000',
@@ -681,9 +1199,11 @@ export default function LogGrindChatScreen() {
       shadowOpacity: 0.25,
       shadowRadius: 16,
       elevation: 10,
+      overflow: 'hidden',
     },
     modalHeader: {
       paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.lg,
       paddingBottom: theme.spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
@@ -776,50 +1296,6 @@ export default function LogGrindChatScreen() {
     );
   };
 
-  // Tier Selection Modal
-  const TierSelectionModal = () => {
-    const renderTierItem = ({ item }: { item: any }) => (
-      <Pressable
-        style={styles.tierItem}
-        onPress={() => handleTierSelection(item)}
-      >
-        <View>
-          <Text style={styles.tierItemText}>{item.tier_name || item.name}</Text>
-          {item.rank_group && (
-            <Text style={styles.tierItemMeta}>{item.rank_group}</Text>
-          )}
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={primaryColor} />
-      </Pressable>
-    );
-
-    return (
-      <Modal
-        visible={showTierModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowTierModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {tierSelectionStep === 'starting' ? 'Select Starting Tier' : 'Select Target Tier'}
-              </Text>
-            </View>
-            <FlatList
-              style={styles.tierList}
-              data={tiers}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderTierItem}
-              scrollEnabled
-            />
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -883,43 +1359,51 @@ export default function LogGrindChatScreen() {
 
         {/* Input Area */}
         <View style={styles.inputContainer}>
-          {step === 'tiers' || step === 'targetTier' ? (
-            <Pressable
-              style={[styles.input, { justifyContent: 'center', paddingLeft: theme.spacing.lg }]}
-              onPress={() => setShowTierModal(true)}
-            >
-              <Text style={[styles.messageText, { color: primaryColor }]}>
-                {step === 'tiers' ? 'Select Starting Tier →' : 'Select Target Tier →'}
-              </Text>
-            </Pressable>
-          ) : (
-            <>
-              <TextInput
-                style={styles.input}
-                placeholder="Type your answer..."
-                placeholderTextColor={theme.colors.textSecondary}
-                value={inputValue}
-                onChangeText={setInputValue}
-                multiline
-                editable={!isLoading}
-              />
-              <Pressable
-                style={styles.sendButton}
-                onPress={handleSendMessage}
-                disabled={isLoading || !inputValue.trim()}
-              >
-                <Ionicons
-                  name={isLoading ? 'hourglass' : 'send'}
-                  size={20}
-                  color="#FFFFFF"
-                />
-              </Pressable>
-            </>
-          )}
+          <TextInput
+            style={styles.input}
+            placeholder="Type your answer..."
+            placeholderTextColor={theme.colors.textSecondary}
+            value={inputValue}
+            onChangeText={setInputValue}
+            multiline
+            editable={!isLoading}
+          />
+          <Pressable
+            style={styles.sendButton}
+            onPress={handleSendMessage}
+            disabled={isLoading || !inputValue.trim()}
+          >
+            <Ionicons
+              name={isLoading ? 'hourglass' : 'send'}
+              size={20}
+              color="#FFFFFF"
+            />
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
 
-      <TierSelectionModal />
+      {/* Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={formData.dueDateObj || new Date()}
+          mode="date"
+          display="spinner"
+          onChange={handleDateChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      {/* Time Picker */}
+      {showTimePicker && (
+        <DateTimePicker
+          value={formData.dueDateObj || new Date()}
+          mode="time"
+          display="spinner"
+          onChange={handleTimeChange}
+          is24Hour={false}
+        />
+      )}
+
       <FloatingNav />
     </SafeAreaView>
   );

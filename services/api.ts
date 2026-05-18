@@ -705,6 +705,16 @@ export const grindApi = {
     }>(`/grinds/${grindId}/complete`, {
       method: 'POST',
     }, token),
+
+  /**
+   * Delete a grind
+   */
+  deleteGrind: async (grindId: number, token: string) =>
+    apiCall<{
+      message: string;
+    }>(`/grinds/${grindId}`, {
+      method: 'DELETE',
+    }, token),
 };
 
 /**

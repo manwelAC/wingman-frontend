@@ -1,24 +1,27 @@
 import { Button } from '@/components/ui/Button';
+import { DeleteConfirmationModal } from '@/components/ui/DeleteConfirmationModal';
 import FloatingNav from '@/components/ui/FloatingNav';
 import { useTheme } from '@/constants/useTheme';
 import { grindApi } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useMemo, useState } from 'react';
+import * as Sharing from 'expo-sharing';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    Pressable,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    useColorScheme,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useColorScheme,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+const ViewShot = require('react-native-view-shot').default;
 
 interface Grind {
   id: number;
@@ -55,7 +58,11 @@ export default function GrindsScreen() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedGrind, setSelectedGrind] = useState<Grind | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const receiptViewRef = useRef<any>(null);
 
   // Load grinds only on initial mount
   useEffect(() => {
@@ -190,6 +197,51 @@ export default function GrindsScreen() {
       }
     } catch (error) {
       console.error('Failed to cancel grind:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteGrind = async () => {
+    if (!selectedGrind) return;
+    try {
+      setActionLoading(true);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await grindApi.deleteGrind(selectedGrind.id, token);
+      
+      if (response.success) {
+        console.log('Grind deleted:', selectedGrind.id);
+        // Refresh list after action
+        await loadGrinds();
+        setShowActionModal(false);
+        setShowConfirmDelete(false);
+      } else {
+        console.error('Failed to delete grind:', response.message);
+      }
+    } catch (error) {
+      console.error('Failed to delete grind:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDownloadReceipt = async () => {
+    if (!receiptViewRef.current) return;
+    try {
+      setActionLoading(true);
+      // Capture the receipt view as an image
+      const uri = await receiptViewRef.current.capture();
+      
+      // Share the captured image directly (allows saving, downloading, etc.)
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/png',
+        dialogTitle: `Download Receipt - ${selectedGrind?.grind_number}`,
+        UTI: 'com.compuserve.gif',
+      });
+    } catch (error) {
+      console.error('Failed to download receipt:', error);
     } finally {
       setActionLoading(false);
     }
@@ -482,30 +534,30 @@ export default function GrindsScreen() {
       color: theme.colors.textPrimary,
     },
     detailSection: {
-      marginBottom: theme.spacing.lg,
+      marginBottom: theme.spacing.xl,
     },
     detailSectionTitle: {
-      fontSize: 12,
+      fontSize: 15,
       fontFamily: 'DMMono',
       fontWeight: 'bold',
       color: theme.colors.textSecondary,
-      marginBottom: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
     },
     detailRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: theme.spacing.md,
-      paddingBottom: theme.spacing.md,
+      marginBottom: theme.spacing.lg,
+      paddingBottom: theme.spacing.lg,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     },
     detailRowLabel: {
-      fontSize: 13,
+      fontSize: 14,
       fontFamily: 'DMMono',
       color: theme.colors.textSecondary,
     },
     detailRowValue: {
-      fontSize: 13,
+      fontSize: 15,
       fontFamily: 'DMMono-Medium',
       fontWeight: 'bold',
       color: theme.colors.textPrimary,
@@ -513,6 +565,72 @@ export default function GrindsScreen() {
     actionButtonsContainer: {
       marginTop: theme.spacing.lg,
       gap: theme.spacing.md,
+    },
+    actionModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.lg,
+    },
+    actionModalContent: {
+      backgroundColor: colorScheme === 'dark' 
+        ? 'rgba(31, 41, 55, 0.8)'
+        : 'rgba(255, 255, 255, 0.85)',
+      borderRadius: 20,
+      borderWidth: 1.5,
+      borderColor: colorScheme === 'dark'
+        ? 'rgba(148, 163, 184, 0.3)'
+        : 'rgba(226, 232, 240, 0.6)',
+      padding: theme.spacing.lg,
+      width: '100%',
+      maxWidth: 300,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 16,
+      elevation: 12,
+      backdropFilter: 'blur(10px)',
+    },
+    actionModalHeader: {
+      marginBottom: theme.spacing.lg,
+      paddingBottom: theme.spacing.lg,
+      borderBottomWidth: 1.5,
+      borderBottomColor: theme.colors.border,
+    },
+    actionModalTitle: {
+      fontSize: 16,
+      fontFamily: 'DMMono-Medium',
+      fontWeight: 'bold',
+      color: theme.colors.textPrimary,
+    },
+    actionModalSubtitle: {
+      fontSize: 12,
+      fontFamily: 'DMMono',
+      color: theme.colors.textSecondary,
+      marginTop: 4,
+    },
+    actionModalButtons: {
+      gap: theme.spacing.md,
+    },
+    actionModalButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+    },
+    actionModalButtonIcon: {
+      marginRight: theme.spacing.md,
+    },
+    actionModalButtonLabel: {
+      fontSize: 14,
+      fontFamily: 'DMMono-Medium',
+      fontWeight: 'bold',
+      color: theme.colors.textPrimary,
     },
   });
 
@@ -630,7 +748,7 @@ export default function GrindsScreen() {
                 key={grind.id}
                 onPress={() => {
                   setSelectedGrind(grind);
-                  setShowDetailModal(true);
+                  setShowActionModal(true);
                 }}
               >
                 <View style={styles.grindCard}>
@@ -677,6 +795,83 @@ export default function GrindsScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Action Modal - Floating Menu */}
+      <Modal
+        visible={showActionModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowActionModal(false)}
+      >
+        <Pressable 
+          style={styles.actionModalOverlay}
+          onPress={() => setShowActionModal(false)}
+        >
+          <Pressable 
+            style={styles.actionModalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <View style={styles.actionModalHeader}>
+              <Text style={styles.actionModalTitle}>{selectedGrind?.grind_number}</Text>
+              <Text style={styles.actionModalSubtitle}>{selectedGrind?.customer.display_name}</Text>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.actionModalButtons}>
+              {/* View Button */}
+              <Pressable 
+                style={styles.actionModalButton}
+                onPress={() => {
+                  setShowActionModal(false);
+                  setShowDetailModal(true);
+                }}
+              >
+                <View style={styles.actionModalButtonIcon}>
+                  <Ionicons name="eye" size={20} color={primaryColor} />
+                </View>
+                <Text style={styles.actionModalButtonLabel}>View</Text>
+              </Pressable>
+
+              {/* Receipt Button */}
+              <Pressable 
+                style={styles.actionModalButton}
+                onPress={() => {
+                  setShowActionModal(false);
+                  setShowReceiptModal(true);
+                }}
+              >
+                <View style={styles.actionModalButtonIcon}>
+                  <Ionicons name="receipt" size={20} color={primaryColor} />
+                </View>
+                <Text style={styles.actionModalButtonLabel}>Receipt</Text>
+              </Pressable>
+
+              {/* Edit Button */}
+              <Pressable style={styles.actionModalButton}>
+                <View style={styles.actionModalButtonIcon}>
+                  <Ionicons name="create-outline" size={20} color={primaryColor} />
+                </View>
+                <Text style={styles.actionModalButtonLabel}>Edit</Text>
+              </Pressable>
+
+              {/* Delete Button */}
+              <Pressable 
+                style={[styles.actionModalButton, { borderColor: theme.colors.statusDanger }]}
+                onPress={() => {
+                  setShowConfirmDelete(true);
+                }}
+                disabled={actionLoading}
+              >
+                <View style={styles.actionModalButtonIcon}>
+                  <Ionicons name="trash-outline" size={20} color={theme.colors.statusDanger} />
+                </View>
+                <Text style={[styles.actionModalButtonLabel, { color: theme.colors.statusDanger }]}>Delete</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Detail Modal */}
       <Modal
@@ -879,6 +1074,148 @@ export default function GrindsScreen() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Receipt Modal */}
+      <Modal
+        visible={showReceiptModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowReceiptModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: theme.spacing.lg }}>
+          <View style={{ backgroundColor: theme.colors.surface, borderRadius: 16, padding: theme.spacing.lg, maxHeight: '90%', width: '100%' }}>
+            {/* Receipt Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+              <Text style={{ fontSize: 18, fontFamily: 'DMMono-Medium', fontWeight: 'bold', color: theme.colors.textPrimary }}>
+                Receipt
+              </Text>
+              <Pressable onPress={() => setShowReceiptModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+              </Pressable>
+            </View>
+
+            {/* Receipt Content */}
+            <ScrollView style={{ maxHeight: '70%' }}>
+              <ViewShot ref={receiptViewRef} options={{ format: 'png', quality: 0.95 }}>
+                <View style={{ backgroundColor: '#FFFFFF', padding: theme.spacing.lg, borderRadius: 12 }}>
+                  {/* Header */}
+                  <View style={{ alignItems: 'center', marginBottom: theme.spacing.lg, paddingBottom: theme.spacing.lg, borderBottomWidth: 2, borderBottomColor: '#E5E7EB' }}>
+                    <Text style={{ fontSize: 24, fontFamily: 'DMMono-Medium', fontWeight: 'bold', color: '#1F2937', marginBottom: 4 }}>
+                      WINGMAN
+                    </Text>
+                    <Text style={{ fontSize: 12, fontFamily: 'DMMono', color: '#6B7280' }}>
+                      Grind Receipt
+                    </Text>
+                  </View>
+
+                  {/* Grind Number */}
+                  <View style={{ marginBottom: theme.spacing.lg }}>
+                    <Text style={{ fontSize: 11, fontFamily: 'DMMono', color: '#6B7280', marginBottom: 4 }}>
+                      GRIND NUMBER
+                    </Text>
+                    <Text style={{ fontSize: 16, fontFamily: 'DMMono-Medium', fontWeight: 'bold', color: '#1F2937' }}>
+                      {selectedGrind?.grind_number}
+                    </Text>
+                  </View>
+
+                  {/* Customer Info */}
+                  <View style={{ marginBottom: theme.spacing.lg }}>
+                    <Text style={{ fontSize: 11, fontFamily: 'DMMono', color: '#6B7280', marginBottom: 4 }}>
+                      CUSTOMER
+                    </Text>
+                    <Text style={{ fontSize: 14, fontFamily: 'DMMono', color: '#1F2937' }}>
+                      {selectedGrind?.customer.display_name}
+                    </Text>
+                  </View>
+
+                  {/* Service Details */}
+                  <View style={{ marginBottom: theme.spacing.lg, paddingBottom: theme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                    <View style={{ marginBottom: 8 }}>
+                      <Text style={{ fontSize: 11, fontFamily: 'DMMono', color: '#6B7280' }}>Game</Text>
+                      <Text style={{ fontSize: 13, fontFamily: 'DMMono', color: '#1F2937', fontWeight: '500' }}>
+                        {selectedGrind?.game}
+                      </Text>
+                    </View>
+                    <View style={{ marginBottom: 8 }}>
+                      <Text style={{ fontSize: 11, fontFamily: 'DMMono', color: '#6B7280' }}>Service Type</Text>
+                      <Text style={{ fontSize: 13, fontFamily: 'DMMono', color: '#1F2937', fontWeight: '500' }}>
+                        {selectedGrind?.service_type.replace('_', ' ').toUpperCase()}
+                      </Text>
+                    </View>
+                    {selectedGrind?.due_date && (
+                      <View>
+                        <Text style={{ fontSize: 11, fontFamily: 'DMMono', color: '#6B7280' }}>Due Date</Text>
+                        <Text style={{ fontSize: 13, fontFamily: 'DMMono', color: '#1F2937', fontWeight: '500' }}>
+                          {new Date(selectedGrind.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Pricing */}
+                  <View style={{ marginBottom: theme.spacing.lg, paddingBottom: theme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 12, fontFamily: 'DMMono', color: '#6B7280' }}>Base Price</Text>
+                      <Text style={{ fontSize: 12, fontFamily: 'DMMono', color: '#1F2937' }}>
+                        ₱{parseFloat(selectedGrind?.base_price || '0').toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 12, fontFamily: 'DMMono', color: '#6B7280' }}>Final Price</Text>
+                      <Text style={{ fontSize: 12, fontFamily: 'DMMono', fontWeight: '600', color: '#059669' }}>
+                        ₱{parseFloat(selectedGrind?.final_price || '0').toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Status & Dates */}
+                  <View style={{ marginBottom: theme.spacing.lg }}>
+                    <Text style={{ fontSize: 11, fontFamily: 'DMMono', color: '#6B7280', marginBottom: 8 }}>STATUS</Text>
+                    <Text style={{ fontSize: 14, fontFamily: 'DMMono-Medium', fontWeight: 'bold', color: getStatusColor(selectedGrind?.status), marginBottom: 8 }}>
+                      {getStatusLabel(selectedGrind?.status || '')}
+                    </Text>
+                    {selectedGrind?.completed_at && (
+                      <Text style={{ fontSize: 11, fontFamily: 'DMMono', color: '#6B7280' }}>
+                        Completed: {formatDateTime(selectedGrind.completed_at)}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Footer */}
+                  <View style={{ alignItems: 'center', borderTopWidth: 2, borderTopColor: '#E5E7EB', paddingTopWidth: theme.spacing.lg, marginTop: theme.spacing.lg }}>
+                    <Text style={{ fontSize: 10, fontFamily: 'DMMono', color: '#6B7280', marginTop: 8 }}>
+                      Generated: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </Text>
+                  </View>
+                </View>
+              </ViewShot>
+            </ScrollView>
+
+            {/* Download Button */}
+            <View style={{ marginTop: theme.spacing.lg }}>
+              <Button
+                label={actionLoading ? 'Downloading...' : '⬇️ Download as PNG'}
+                onPress={handleDownloadReceipt}
+                variant="primary"
+                fullWidth
+                disabled={actionLoading}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <DeleteConfirmationModal
+        visible={showConfirmDelete}
+        title="Delete Grind?"
+        message={`Are you sure you want to delete grind ${selectedGrind?.grind_number}? This action cannot be undone.`}
+        loading={actionLoading}
+        onConfirm={handleDeleteGrind}
+        onCancel={() => setShowConfirmDelete(false)}
+        confirmText="Delete"
+        iconName="trash"
+        isDangerous={true}
+      />
 
       <FloatingNav />
     </SafeAreaView>
